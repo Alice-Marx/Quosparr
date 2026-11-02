@@ -6,6 +6,7 @@ const (
 	xSkillsManage            textKey = "skillsManage"
 	xSkillsSummary           textKey = "skillsSummary"
 	xSkillsIssueCount        textKey = "skillsIssueCount"
+	xSkillsIssueMore         textKey = "skillsIssueMore"
 	xSkillsEmpty             textKey = "skillsEmpty"
 	xSkillsSearch            textKey = "skillsSearch"
 	xSkillsNoMatch           textKey = "skillsNoMatch"
@@ -104,6 +105,7 @@ func init() {
 		xSkillsManage:            {"Manage skills", "管理 Skills", "管理 Skills", "Skills 관리", "Skillsを管理", "Управление навыками", "Gérer les skills"},
 		xSkillsSummary:           {"Installed %d · Off %d", "已安装 %d · 已停用 %d", "已安裝 %d · 已停用 %d", "설치됨 %d · 꺼짐 %d", "インストール済み %d · オフ %d", "Установлено %d · Отключено %d", "Installés %d · Désactivés %d"},
 		xSkillsIssueCount:        {"Issues found: %d", "发现问题：%d", "發現問題：%d", "발견된 문제: %d", "検出された問題：%d", "Найдено проблем: %d", "Problèmes détectés : %d"},
+		xSkillsIssueMore:         {"%d more", "还有 %d 个", "還有 %d 個", "%d개 더", "ほか %d 件", "ещё %d", "%d de plus"},
 		xSkillsEmpty:             {"No global skills found", "未找到全局 Skill", "未找到全域 Skill", "전역 Skill이 없습니다", "グローバルSkillが見つかりません", "Глобальные навыки не найдены", "Aucun skill global trouvé"},
 		xSkillsSearch:            {"Search skills", "搜索 Skill", "搜尋 Skill", "Skill 검색", "Skillを検索", "Поиск навыков", "Rechercher un skill"},
 		xSkillsNoMatch:           {"No matching skills", "没有匹配的 Skill", "沒有符合的 Skill", "일치하는 Skill이 없습니다", "一致するSkillはありません", "Совпадений нет", "Aucun skill correspondant"},

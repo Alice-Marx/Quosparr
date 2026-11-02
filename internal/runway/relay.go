@@ -195,7 +195,7 @@ func (s *Service) refreshKeyMode(ctx context.Context, auth codex.Auth, gen uint6
 		s.probeCurrentRelay(ctx, auth)
 		s.leaveAccount(gen, SectionQuota)
 	}
-	s.scanAfterQuota(ctx, auth, gen, codexapi.QuotaSnapshot{}, policy, local)
+	s.scanAfterQuota(ctx, auth, gen, codexapi.QuotaSnapshot{}, policy, local, "", "")
 }
 
 // refreshKeyQuota is the manual quota refresh for an API key login.

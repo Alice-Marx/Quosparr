@@ -42,6 +42,9 @@ func panelGrokBot(c *ui.Context, a *App, l l10n.Localizer, prefs store.Preferenc
 			grokBotReading(c, l, s, st.resetSwitch(prefs.QuotaResetTimeFormat))
 		}
 	})
+	if s.ready() {
+		grokBotSections(c, l, s, st.resetSwitch(prefs.QuotaResetTimeFormat), &first)
+	}
 }
 
 func grokBotIdentityRow(c *ui.Context, l l10n.Localizer, a *App) {

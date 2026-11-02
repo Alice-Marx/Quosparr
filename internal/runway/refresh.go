@@ -66,10 +66,25 @@ func (s *Service) errTextLocked(err error) string {
 	if key := CredentialModeErrorKey(err); key != "" {
 		return s.lc.Text(key)
 	}
+	var dial *netx.DialError
+	if errors.As(err, &dial) {
+		return s.lc.ProxyDial(dial.Endpoint, dial.DirectTried)
+	}
 	if key := netx.L10nKey(err); key != "" {
 		return s.lc.Text(key)
 	}
 	return err.Error()
+}
+
+// usageGapCopyLocked is the Chinese (or current language) explanation when
+// official usage failed and local sessions are the remaining source.
+func (s *Service) usageGapCopyLocked(err error) (shown, empty string) {
+	prefix := ""
+	var dial *netx.DialError
+	if errors.As(err, &dial) {
+		prefix = s.lc.ProxyDial(dial.Endpoint, dial.DirectTried) + " "
+	}
+	return prefix + s.lc.CodexNotice("cost_local"), prefix + s.lc.CodexNotice("cost_none")
 }
 
 // humanizeLocked turns an authentication failure into the text shown to the
@@ -557,6 +572,8 @@ func (s *Service) finishFull(id uint64) {
 	s.allBusy, s.fullCancel, s.fullDone = false, nil, nil
 	localPending := s.localPending
 	s.localPending = false
+	repairAfter := s.repairAfterFull
+	s.repairAfterFull = false
 	now := s.now()
 	s.schedule.RefreshCompleted(now, s.refreshInterval())
 	hasWidgets := s.widgetReqs != 0 && s.opts.WidgetSink != nil
@@ -573,6 +590,9 @@ func (s *Service) finishFull(id uint64) {
 	}
 	if localPending {
 		s.refreshPanelLocal()
+	}
+	if repairAfter {
+		s.RepairSessions()
 	}
 	s.emit(Event{Kind: EventFullRefreshDone})
 }
@@ -709,13 +729,19 @@ func (s *Service) refreshLegs(ctx context.Context, auth codex.Auth, gen uint64, 
 	wg.Wait()
 
 	var remote error
+	gapShown, gapEmpty := "", ""
 	if qErr == nil {
 		if local.panel && prefs.ShowsQuotaEstimateSummary {
 			s.loadEstimate(ctx, auth, gen, quota)
 		}
-		s.scanAfterQuota(ctx, auth, gen, quota, policy, local)
 	} else if !stopped(ctx, qErr) {
 		remote = qErr
+		s.mu.Lock()
+		gapShown, gapEmpty = s.usageGapCopyLocked(qErr)
+		s.mu.Unlock()
+	}
+	if qErr == nil || gapShown != "" {
+		s.scanAfterQuota(ctx, auth, gen, quota, policy, local, gapShown, gapEmpty)
 	}
 	if credErr != nil && !stopped(ctx, credErr) && (remote == nil || IsAuthFailure(credErr)) {
 		remote = credErr
@@ -724,7 +750,7 @@ func (s *Service) refreshLegs(ctx context.Context, auth codex.Auth, gen uint64, 
 }
 
 // scanAfterQuota runs the cost / heatmap scans a full refresh owes.
-func (s *Service) scanAfterQuota(ctx context.Context, auth codex.Auth, gen uint64, quota codexapi.QuotaSnapshot, policy usage.RefreshPolicy, local localScope) {
+func (s *Service) scanAfterQuota(ctx context.Context, auth codex.Auth, gen uint64, quota codexapi.QuotaSnapshot, policy usage.RefreshPolicy, local localScope, gapShown, gapEmpty string) {
 	if !s.current(auth, gen) {
 		return
 	}
@@ -750,7 +776,7 @@ func (s *Service) scanAfterQuota(ctx context.Context, auth codex.Auth, gen uint6
 		return
 	}
 	defer s.leave(secs...)
-	s.scanCostAndHeatmap(ctx, quota, auth, gen, policy, needsCost, needsHeat)
+	s.scanCostAndHeatmap(ctx, quota, auth, gen, policy, needsCost, needsHeat, gapShown, gapEmpty)
 	done := s.now()
 	s.mu.Lock()
 	if s.isCurrentLocked(auth, gen) {
@@ -1218,11 +1244,19 @@ func (s *Service) loadSessionReport(ctx context.Context) {
 // first) and reports the outcome in the snapshot.
 func (s *Service) RepairSessions() <-chan struct{} {
 	s.mu.Lock()
-	skip := s.allBusy
-	s.mu.Unlock()
-	if skip || s.src.RepairSessions == nil {
+	if s.src.RepairSessions == nil {
+		s.mu.Unlock()
 		return closedChan()
 	}
+	if s.allBusy {
+		s.repairAfterFull = true
+		s.repairQueued = true
+		s.publishLocked()
+		s.mu.Unlock()
+		return closedChan()
+	}
+	s.repairQueued = false
+	s.mu.Unlock()
 	return s.run(func() {
 		if !s.enter(SectionSessionRepair) {
 			return
@@ -1231,6 +1265,7 @@ func (s *Service) RepairSessions() <-chan struct{} {
 		r, err := s.src.RepairSessions(s.root)
 		s.mu.Lock()
 		defer s.mu.Unlock()
+		s.repairQueued = false
 		if err != nil {
 			s.repairDone, s.repairErr = false, err.Error()
 		} else {

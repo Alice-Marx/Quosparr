@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -145,25 +146,75 @@ func TestSOCKS5CarriesRequests(t *testing.T) {
 	}
 }
 
-func TestUnavailableProxyNeverFallsBackToDirect(t *testing.T) {
+func TestUnavailableProxyRetriesDirectOnce(t *testing.T) {
 	var hits atomic.Int32
-	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { hits.Add(1) }))
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		_, _ = io.WriteString(w, "ok")
+	}))
 	defer target.Close()
 	// A closed port: reserve one and release it.
 	ln := httptest.NewServer(nil)
 	host, port := hostPortOf(ln.Listener.Addr().String())
 	ln.Close()
 	for _, mode := range []store.ProxyMode{store.ProxyModeHTTP, store.ProxyModeSOCKS5} {
+		before := hits.Load()
 		c, err := NewContext(manualConfig(mode, host, port, false), nil)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := get(t, c, target.URL); !errors.Is(err, ErrConnectionFailed) {
-			t.Fatalf("%s: err = %v", mode, err)
+		body, err := get(t, c, target.URL)
+		if err != nil || body != "ok" {
+			t.Fatalf("%s: %q %v", mode, body, err)
+		}
+		if hits.Load() != before+1 {
+			t.Fatalf("%s: direct hits %d", mode, hits.Load()-before)
 		}
 	}
-	if hits.Load() != 0 {
-		t.Fatalf("target was reached directly %d times", hits.Load())
+	note, ok := NoteFallback()
+	if !ok || !note.DirectOK || note.Endpoint != net_JoinHostPort(host, port) {
+		t.Fatalf("notice %+v ok=%v", note, ok)
+	}
+}
+
+func TestProxyDialFailureDoesNotLeakTransportText(t *testing.T) {
+	target := httptest.NewServer(okHandler("x"))
+	target.Close()
+	ln := httptest.NewServer(nil)
+	host, port := hostPortOf(ln.Listener.Addr().String())
+	ln.Close()
+	c, err := NewContext(manualConfig(store.ProxyModeHTTP, host, port, false), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = get(t, c, target.URL)
+	var dial *DialError
+	if !errors.As(err, &dial) || !errors.Is(err, ErrConnectionFailed) {
+		t.Fatalf("err = %v", err)
+	}
+	if strings.Contains(err.Error(), "proxyconnect") || strings.Contains(err.Error(), "dial tcp") {
+		t.Fatalf("raw dial text leaked: %v", err)
+	}
+	if !strings.Contains(err.Error(), net_JoinHostPort(host, port)) || !dial.DirectTried {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestSystemProxyDialFailureRetriesDirect(t *testing.T) {
+	var hits atomic.Int32
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		_, _ = io.WriteString(w, "ok")
+	}))
+	defer target.Close()
+	ln := httptest.NewServer(nil)
+	host, port := hostPortOf(ln.Listener.Addr().String())
+	ln.Close()
+	proxyURL := &url.URL{Scheme: "http", Host: net_JoinHostPort(host, port)}
+	c := SystemContext(WithSystemProxy(func(*url.URL) (*url.URL, error) { return proxyURL, nil }))
+	body, err := get(t, c, target.URL)
+	if err != nil || body != "ok" || hits.Load() != 1 {
+		t.Fatalf("body %q err %v hits %d", body, err, hits.Load())
 	}
 }
 

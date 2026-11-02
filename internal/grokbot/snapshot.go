@@ -27,6 +27,8 @@ const (
 	maxSnapshotBytes int64 = 256 * 1024
 	maxBots                = 64
 	maxActivities          = 64
+	maxHistory             = 256
+	maxCostLines           = 32
 )
 
 // UsagePath is ~/.quosparr/grokbot-usage.json under home
@@ -60,8 +62,15 @@ type Snapshot struct {
 	HasReset    bool
 	OnDemand    string
 	PeriodLabel string
-	Breakdown   []BotShare
-	Notes       string
+	// PeriodStart is the optional start of the quota window.
+	PeriodStart    time.Time
+	HasPeriodStart bool
+	Breakdown      []BotShare
+	Notes          string
+	History        []HistoryPoint
+	Cache          CacheStats
+	Usage          UsageStats
+	CostLines      []CostLine
 }
 
 // BotShare is one bot's share of the weekly usage.
@@ -162,15 +171,20 @@ func FormatPercent(v float64) string {
 }
 
 type rawSnapshot struct {
-	SchemaVersion *int         `json:"schemaVersion"`
-	FetchedAt     string       `json:"fetchedAt"`
-	Plan          string       `json:"plan"`
-	UsedPercent   *json.Number `json:"usedPercent"`
-	ResetAt       string       `json:"resetAt"`
-	OnDemand      *rawOnDemand `json:"onDemand"`
-	PeriodLabel   string       `json:"periodLabel"`
-	Breakdown     []rawBot     `json:"breakdown"`
-	Notes         string       `json:"notes"`
+	SchemaVersion *int          `json:"schemaVersion"`
+	FetchedAt     string        `json:"fetchedAt"`
+	Plan          string        `json:"plan"`
+	UsedPercent   *json.Number  `json:"usedPercent"`
+	ResetAt       string        `json:"resetAt"`
+	OnDemand      *rawOnDemand  `json:"onDemand"`
+	PeriodLabel   string        `json:"periodLabel"`
+	PeriodStart   string        `json:"periodStart"`
+	Breakdown     []rawBot      `json:"breakdown"`
+	Notes         string        `json:"notes"`
+	History       []rawHistory  `json:"history"`
+	Cache         *rawCache     `json:"cache"`
+	Usage         *rawUsage     `json:"usage"`
+	CostLines     []rawCostLine `json:"costLines"`
 }
 
 type rawOnDemand struct {
@@ -224,17 +238,27 @@ func (r rawSnapshot) snapshot() (Snapshot, error) {
 	if err != nil {
 		return Snapshot{}, err
 	}
+	extra, err := parseExtras(r)
+	if err != nil {
+		return Snapshot{}, err
+	}
 	return Snapshot{
-		SchemaVersion: SchemaVersion,
-		FetchedAt:     fetched,
-		Plan:          plan,
-		UsedPercent:   used,
-		ResetAt:       reset,
-		HasReset:      hasReset,
-		OnDemand:      demand,
-		PeriodLabel:   period,
-		Breakdown:     breakdown,
-		Notes:         notes,
+		SchemaVersion:  SchemaVersion,
+		FetchedAt:      fetched,
+		Plan:           plan,
+		UsedPercent:    used,
+		ResetAt:        reset,
+		HasReset:       hasReset,
+		OnDemand:       demand,
+		PeriodLabel:    period,
+		PeriodStart:    extra.PeriodStart,
+		HasPeriodStart: extra.HasPeriodStart,
+		Breakdown:      breakdown,
+		Notes:          notes,
+		History:        extra.History,
+		Cache:          extra.Cache,
+		Usage:          extra.Usage,
+		CostLines:      extra.CostLines,
 	}, nil
 }
 
@@ -253,6 +277,10 @@ func (s Snapshot) encoded() encodedSnapshot {
 	if s.OnDemand != "" {
 		out.OnDemand = &encodedOnDemand{Status: s.OnDemand}
 	}
+	if s.HasPeriodStart {
+		out.PeriodStart = s.PeriodStart.Format(time.RFC3339)
+	}
+	encodeExtras(&out, s)
 	if len(s.Breakdown) > 0 {
 		out.Breakdown = make([]encodedBot, len(s.Breakdown))
 		for i, bot := range s.Breakdown {
@@ -270,15 +298,20 @@ func (s Snapshot) encoded() encodedSnapshot {
 }
 
 type encodedSnapshot struct {
-	SchemaVersion int              `json:"schemaVersion"`
-	FetchedAt     string           `json:"fetchedAt"`
-	Plan          string           `json:"plan,omitempty"`
-	UsedPercent   json.Number      `json:"usedPercent"`
-	ResetAt       string           `json:"resetAt,omitempty"`
-	OnDemand      *encodedOnDemand `json:"onDemand,omitempty"`
-	PeriodLabel   string           `json:"periodLabel,omitempty"`
-	Breakdown     []encodedBot     `json:"breakdown,omitempty"`
-	Notes         string           `json:"notes,omitempty"`
+	SchemaVersion int               `json:"schemaVersion"`
+	FetchedAt     string            `json:"fetchedAt"`
+	Plan          string            `json:"plan,omitempty"`
+	UsedPercent   json.Number       `json:"usedPercent"`
+	ResetAt       string            `json:"resetAt,omitempty"`
+	OnDemand      *encodedOnDemand  `json:"onDemand,omitempty"`
+	PeriodLabel   string            `json:"periodLabel,omitempty"`
+	PeriodStart   string            `json:"periodStart,omitempty"`
+	Breakdown     []encodedBot      `json:"breakdown,omitempty"`
+	Notes         string            `json:"notes,omitempty"`
+	History       []encodedHistory  `json:"history,omitempty"`
+	Cache         *encodedCache     `json:"cache,omitempty"`
+	Usage         *encodedUsage     `json:"usage,omitempty"`
+	CostLines     []encodedCostLine `json:"costLines,omitempty"`
 }
 
 type encodedOnDemand struct {

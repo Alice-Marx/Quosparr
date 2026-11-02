@@ -153,7 +153,7 @@ Linux 需要 GTK3、AppIndicator、支援系統匣的桌面環境，以及可用
 
 在 **控制台 → 通用 → 網路** 中選擇 **跟隨系統**、HTTP 或 SOCKS5，自訂代理支援使用者名稱與密碼。此設定涵蓋應用程式發起的 Codex、Claude 與 Grok 請求、CLI 操作、公開的狀態與價格來源，以及軟體更新。不會修改系統代理，瀏覽器登入頁面與已在執行的外部 CLI 沿用各自的設定。
 
-修改須在點選 **儲存代理設定** 後才會生效。**測試連線** 以目前的草稿存取測試站點（預設 `https://github.com`，可自訂），不會傳送帳號憑證，也不會儲存草稿。代理密碼分別儲存在 macOS 鑰匙圈、Windows 認證管理員或 Linux Secret Service 中。設定無效、憑證無法取得或自訂代理失敗時，絕不會自動改為直接連線。
+修改須在點選 **儲存代理設定** 後才會生效。**測試連線** 以目前的草稿存取測試站點（預設 `https://github.com`，可自訂），不會傳送帳號憑證，也不會儲存草稿。代理密碼分別儲存在 macOS 鑰匙圈、Windows 認證管理員或 Linux Secret Service 中。設定無效、憑證無法取得，或系統代理無法解析時，不會自動改為直接連線。已設定的 HTTP、SOCKS 或系統代理若撥號被拒絕或逾時，會對該請求改試一次直接連線，並在介面說明。
 
 ## 隱私
 
@@ -179,7 +179,7 @@ Linux 需要 GTK3、AppIndicator、支援系統匣的桌面環境，以及可用
 - **Claude Code 訂閱用量**：來自未公開的 OAuth usage 端點，只表示目前的 Claude Code 訂閱，不寫成官方計費介面。不讀取瀏覽器 Cookie 或 Console API 帳單，Desktop 設定檔僅由上述獨立且明確確認的功能管理。
 - **Claude API 等價成本**：依 Claude Code 本機工作階段日誌與價格表 `anthropic-builtin-2026-10-14` 計算。同一則回覆按訊息 ID 只計一次。快取寫入分為 5 分鐘與 1 小時，Fast 檔單獨計價。未知模型不報告精確費用。按日統計使用本地時區。
 - **Grok 額度**：僅使用官方 CLI chat-proxy 的 `/v1/billing?format=credits` 端點。不讀取瀏覽器 Cookie，不從本機日誌推算額度，也不混入 API 帳單。
-- **Grok Bot 助手每週額度**：只使用本機 JSON 快照，schema 版本 1，路徑為 `~/.quosparr/grokbot-usage.json`（Windows 為 `%USERPROFILE%\.quosparr\grokbot-usage.json`）。沒有公開的第三方計費 API。範例與欄位見 [`examples/grokbot-usage.json`](examples/grokbot-usage.json)：`schemaVersion`、`fetchedAt`、`plan`、`usedPercent`、`resetAt`、`onDemand.status`、`periodLabel`、`breakdown[].bot`、`breakdown[].sharePercent`、`breakdown[].activities[].name`、`breakdown[].activities[].sharePercent`、`notes`。`schemaVersion` 必須為 `1`。`usedPercent` 為 0 到 100。時間為 RFC3339。該檔案是非金鑰用量統計，權限 `0600`。可從面板匯入，或把範例複製到該路徑。取代檔案須以原子方式完成：先在同一目錄寫暫存檔，再改名。本應用程式不讀取 Cookie、Grok Bot 設定頁或 Cursor 儀表板。
+- **Grok Bot 助手每週額度**：只使用本機 JSON 快照，schema 版本 1，路徑為 `~/.quosparr/grokbot-usage.json`（Windows 為 `%USERPROFILE%\.quosparr\grokbot-usage.json`）。沒有公開的第三方計費 API。範例與欄位見 [`examples/grokbot-usage.json`](examples/grokbot-usage.json)：`schemaVersion`、`fetchedAt`、`plan`、`usedPercent`、`resetAt`、`onDemand.status`、`periodLabel`、`breakdown[].bot`、`breakdown[].sharePercent`、`breakdown[].activities[].name`、`breakdown[].activities[].sharePercent`、`notes`。選用欄位仍是 schema 1：`periodStart`、`history[]`（`at`、`usedPercent`）、`cache`（`hitPercent`、`hits`、`misses`、`notes`）、`usage`（`inputTokens`、`outputTokens`、`cacheReadTokens`、`model`、`costUsd`）與 `costLines[]`。面板用它們顯示速率、重置、額度推算、快取命中和 API 等價成本。助手沒有可修復的本機工作階段索引。只含必填欄位的檔案是 [`examples/grokbot-usage.min.json`](examples/grokbot-usage.min.json)。`schemaVersion` 必須為 `1`。`usedPercent` 為 0 到 100。時間為 RFC3339。該檔案是非金鑰用量統計，權限 `0600`。可從面板匯入，或把範例複製到該路徑。取代檔案須以原子方式完成：先在同一目錄寫暫存檔，再改名。本應用程式不讀取 Cookie、Grok Bot 設定頁或 Cursor 儀表板。
 - **Grok API 等價成本**：依本機 `turn_completed` 用量與價格表 `xai-builtin-2026-09-27` 計算，區分輸入、快取、輸出及長上下文費率。`costUsdTicks` 屬於訂閱額度記帳，不作為 API 等價成本。
 - **Codex 重設動態**：來自公開來源 [didcodexreset.com/api/status.json](https://didcodexreset.com/api/status.json)。非官方，僅供參考，可能延遲。
 - 圖表中的「官方統計（多端）」屬於目前帳號，「本機日誌（全部本機工作階段）」掃描本機，可能跨越多個帳號。兩者並非包含關係，不應相減；Codex 兩種每日數值皆以 UTC 日界計算。

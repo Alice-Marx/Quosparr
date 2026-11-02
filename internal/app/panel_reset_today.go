@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"strings"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/licoy/quosparr/internal/alerts"
 	"github.com/licoy/quosparr/internal/export"
 	"github.com/licoy/quosparr/internal/l10n"
+	"github.com/licoy/quosparr/internal/netx"
 	"github.com/licoy/quosparr/internal/resettoday"
 	"github.com/licoy/quosparr/internal/resettoday/runwayfmt"
 	"github.com/licoy/quosparr/internal/runway"
@@ -15,18 +17,33 @@ import (
 
 const resetSiteURL = "https://didcodexreset.com/"
 
+func resetFeedMessage(lc l10n.Localizer, err error) string {
+	if err == nil {
+		return ""
+	}
+	var dial *netx.DialError
+	if errors.As(err, &dial) {
+		return lc.ProxyDial(dial.Endpoint, dial.DirectTried)
+	}
+	if key := netx.L10nKey(err); key != "" {
+		return lc.Text(key)
+	}
+	return lc.CodexNotice("reset_feed")
+}
+
 // resetCard is the verdict card with everything it needs at one instant.
 type resetCard struct {
-	l      l10n.Localizer
-	snap   *resettoday.Snapshot
-	now    time.Time
-	loc    *time.Location
-	verdct resettoday.VerdictPresentation
-	busy   bool
+	l           l10n.Localizer
+	snap        *resettoday.Snapshot
+	now         time.Time
+	loc         *time.Location
+	verdct      resettoday.VerdictPresentation
+	busy        bool
+	unavailable string
 }
 
 func newResetCard(l l10n.Localizer, state runway.ResetTodayState, busy bool) resetCard {
-	rc := resetCard{l: l, now: time.Now(), loc: time.Local, busy: busy}
+	rc := resetCard{l: l, now: time.Now(), loc: time.Local, busy: busy, unavailable: state.Unavailable}
 	if s, ok := state.Detail.(*resettoday.Snapshot); ok && s != nil {
 		rc.snap = s
 		rc.verdct = s.VerdictPresentation(rc.now, rc.loc)
@@ -140,7 +157,7 @@ func (rc resetCard) hero(c *ui.Context, acts PanelActions, st *panelState) {
 			rc.reactionButton(c, acts, st)
 		})
 		rc.heroSubtitle(c)
-		if st.reaction.task.Err != nil {
+		if st.reaction.failedClick && st.reaction.task.Err != nil {
 			message := tx(rc.l, xReactionFailed)
 			if st.reaction.snapshot != nil && st.reaction.snapshot.IsExhausted() {
 				message = rc.l.Text(l10n.KeyRateLimitResetTodayReactionLimitReached)
@@ -173,6 +190,8 @@ func (rc resetCard) heroSubtitle(c *ui.Context) {
 	if rc.snap == nil {
 		if rc.busy {
 			hint = rc.l.Text(l10n.KeyCalculating)
+		} else if rc.unavailable != "" {
+			hint = rc.unavailable
 		}
 		ui.Text(c, hint).FontSize(fsCaption).TextColor(inkSecondary(t))
 		return

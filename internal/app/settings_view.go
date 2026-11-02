@@ -407,7 +407,7 @@ func (u *settingsUI) proxyGroup(c *ui.Context) {
 				})
 			})
 		}
-		row(l.Text(l10n.KeyNetworkProxyMode), "", func() {
+		row(l.Text(l10n.KeyNetworkProxyMode), tx(l, xProxyDialFallback), func() {
 			modes := store.ProxyModes()
 			if v, ok := pills(c, "px-mode", u.draft.Mode, modes, func(m store.ProxyMode) string {
 				switch m {

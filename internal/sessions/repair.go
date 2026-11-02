@@ -58,8 +58,7 @@ func (r Repairer) Repair() (Report, error) {
 	if err != nil {
 		return Report{}, err
 	}
-	index, err := readIndex(r.CodexHome)
-	if err != nil {
+	if _, err := readIndex(r.CodexHome); err != nil {
 		return Report{}, err
 	}
 	backup, err := r.backupIndex()
@@ -69,7 +68,11 @@ func (r Repairer) Repair() (Report, error) {
 	if err := r.writeIndex(sessions); err != nil {
 		return Report{}, err
 	}
-	return buildReport(sessions, index, backup), nil
+	written, err := readIndex(r.CodexHome)
+	if err != nil {
+		return Report{}, err
+	}
+	return buildReport(sessions, written, backup), nil
 }
 
 func (r Repairer) indexPath() string { return filepath.Join(r.CodexHome, IndexFileName) }

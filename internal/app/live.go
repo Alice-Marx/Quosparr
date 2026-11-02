@@ -1094,7 +1094,14 @@ func resetInterval(s *Settings) time.Duration {
 func (b *resetBridge) State(now time.Time) runway.ResetTodayState {
 	st := b.ref.State()
 	if st.Snapshot == nil {
-		return runway.ResetTodayState{}
+		msg := ""
+		if st.Err != nil {
+			b.mu.Lock()
+			lc := b.lc
+			b.mu.Unlock()
+			msg = resetFeedMessage(lc, st.Err)
+		}
+		return runway.ResetTodayState{Unavailable: msg}
 	}
 	b.mu.Lock()
 	lc := b.lc

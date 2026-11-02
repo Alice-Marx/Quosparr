@@ -215,6 +215,8 @@ type ResetTodayState struct {
 	HasData bool
 	// Detail carries the reset-today package payload for its UI.
 	Detail any
+	// Unavailable is a soft explanation when the public feed has no snapshot.
+	Unavailable string
 }
 
 // ResetTodayProvider is the seam of the reset-today feature. The locking

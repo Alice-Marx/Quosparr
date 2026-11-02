@@ -155,7 +155,7 @@ func (s *Service) saveCostCache(sum usage.Summary) {
 
 // scanCostAndHeatmap is Swift scanCostAndHeatmap: local summaries first, then
 // the online sources; every step is dropped when the account changed.
-func (s *Service) scanCostAndHeatmap(ctx context.Context, quota codexapi.QuotaSnapshot, auth codex.Auth, gen uint64, policy usage.RefreshPolicy, includeCost, includeHeat bool) {
+func (s *Service) scanCostAndHeatmap(ctx context.Context, quota codexapi.QuotaSnapshot, auth codex.Auth, gen uint64, policy usage.RefreshPolicy, includeCost, includeHeat bool, gapShown, gapEmpty string) {
 	if !s.current(auth, gen) {
 		return
 	}
@@ -167,6 +167,9 @@ func (s *Service) scanCostAndHeatmap(ctx context.Context, quota codexapi.QuotaSn
 
 	var fullP, elapsedP *usage.Window
 	if f, e, ok := cycleFor(auth, quota, now, loc); ok {
+		fullP, elapsedP = &f, &e
+	} else if gapShown != "" && !auth.IsAPIKey() {
+		f, e := monthWindows(now, loc)
 		fullP, elapsedP = &f, &e
 	}
 	s.mu.Lock()
@@ -194,7 +197,7 @@ func (s *Service) scanCostAndHeatmap(ctx context.Context, quota codexapi.QuotaSn
 
 	err := s.scanSteps(ctx, auth, gen, now, scanPlan{
 		pricing: price, policy: policy, queries: queries, rng: rng, loc: loc, elapsed: elapsedP, sel: sel,
-		cost: includeCost, heat: includeHeat,
+		cost: includeCost, heat: includeHeat, gapShown: gapShown, gapEmpty: gapEmpty,
 	})
 	if err == nil || stopped(ctx, err) || errors.Is(err, errHeatmap) {
 		return
@@ -206,6 +209,9 @@ func (s *Service) scanCostAndHeatmap(ctx context.Context, quota codexapi.QuotaSn
 	}
 	if includeCost {
 		text := s.costErrorTextLocked(err)
+		if errors.Is(err, ErrUsageUnavailable) && gapEmpty != "" {
+			text = gapEmpty
+		}
 		if s.disp != nil && s.dispRange == rng {
 			s.costNote = text
 		} else {
@@ -213,10 +219,7 @@ func (s *Service) scanCostAndHeatmap(ctx context.Context, quota codexapi.QuotaSn
 		}
 	}
 	if includeHeat {
-		if len(s.heat.AllDevices) == 0 && len(s.heat.Local) == 0 {
-			s.heat.CalculatedAt = now
-		}
-		s.lastErr = s.lc.Text(l10n.KeyTokenUsageHeatmapUnavailable)
+		s.noteHeatmapLocked(now)
 	}
 	s.publishLocked()
 }
@@ -230,6 +233,8 @@ type scanPlan struct {
 	elapsed    *usage.Window
 	sel        *usage.CostRange
 	cost, heat bool
+	gapShown   string
+	gapEmpty   string
 }
 
 func (s *Service) scanSteps(ctx context.Context, auth codex.Auth, gen uint64, now time.Time, p scanPlan) error {
@@ -297,7 +302,7 @@ func (s *Service) costStep(ctx context.Context, auth codex.Auth, gen uint64, now
 		return context.Canceled
 	}
 	if !s.applyPriced(auth, gen, p.pricing, func() {
-		s.disp, s.dispRange, s.costNote, s.costErrText = &shown, p.rng, "", ""
+		s.disp, s.dispRange, s.costNote, s.costErrText = &shown, p.rng, p.gapShown, ""
 		if p.sel != nil {
 			s.detail.put(detailCacheKey(*p.sel), shown)
 		}
@@ -331,10 +336,8 @@ func (s *Service) heatmapStep(ctx context.Context, auth codex.Auth, gen uint64, 
 	}
 	if err != nil {
 		s.apply(auth, gen, func() {
-			s.lastErr = s.lc.Text(l10n.KeyTokenUsageHeatmapUnavailable)
-			if len(s.heat.AllDevices) == 0 && len(s.heat.Local) == 0 {
-				s.heat.CalculatedAt = now
-			}
+			s.heat.Local = local
+			s.noteHeatmapLocked(now)
 		})
 		return errHeatmap
 	}
@@ -342,6 +345,9 @@ func (s *Service) heatmapStep(ctx context.Context, auth codex.Auth, gen uint64, 
 		s.heat = HeatmapData{
 			AllDevices: prof.DailyTokens, Local: local, CalculatedAt: now,
 			OfficialStatsAsOf: prof.StatsAsOf, OfficialGeneratedAt: prof.GeneratedAt,
+		}
+		if s.lastErr == s.lc.Text(l10n.KeyTokenUsageHeatmapUnavailable) {
+			s.lastErr = ""
 		}
 	}) {
 		return context.Canceled
@@ -378,11 +384,11 @@ func (s *Service) refreshCostNow(ctx context.Context, policy usage.RefreshPolicy
 	if err != nil {
 		return
 	}
-	q, ok := s.cycleQuota(ctx, auth, gen)
+	q, shown, empty, ok := s.cycleQuota(ctx, auth, gen)
 	if !ok {
 		return
 	}
-	s.scanCostAndHeatmap(ctx, q, auth, gen, policy, true, false)
+	s.scanCostAndHeatmap(ctx, q, auth, gen, policy, true, false, shown, empty)
 	s.mu.Lock()
 	if s.isCurrentLocked(auth, gen) {
 		s.lastCostDone, s.lastCostCycle, s.lastErr = s.now(), cycleOf(q), ""
@@ -394,32 +400,62 @@ func (s *Service) refreshCostNow(ctx context.Context, policy usage.RefreshPolicy
 // cycleQuota is the quota the cost cycle comes from: the one on hand, else a
 // fetched one. An API key has no quota (and no request is made): its cost uses
 // the calendar month. ok is false when the cost refresh must stop.
-func (s *Service) cycleQuota(ctx context.Context, auth codex.Auth, gen uint64) (codexapi.QuotaSnapshot, bool) {
+func (s *Service) cycleQuota(ctx context.Context, auth codex.Auth, gen uint64) (codexapi.QuotaSnapshot, string, string, bool) {
 	if auth.IsAPIKey() {
-		return codexapi.QuotaSnapshot{}, true
+		return codexapi.QuotaSnapshot{}, "", "", true
 	}
 	s.mu.Lock()
 	cached := s.quota
 	s.mu.Unlock()
 	if cached != nil {
-		return *cached, true
+		return *cached, "", "", true
 	}
 	q, err := s.src.FetchQuota(ctx, apiAuth(auth))
 	if err != nil {
-		if !stopped(ctx, err) {
-			s.fail(&auth, gen, err, func() {
-				text := s.errTextLocked(err)
-				if s.disp != nil {
-					s.costNote = text
-				} else {
-					s.clearDisplayedLocked(s.lc.Text(l10n.KeyUsageAnalyticsUnavailable))
-				}
-				s.lastErr = text
-			})
+		if stopped(ctx, err) {
+			return q, "", "", false
 		}
-		return q, false
+		var shown, empty string
+		keep := false
+		s.mu.Lock()
+		if s.isCurrentLocked(auth, gen) {
+			shown, empty = s.usageGapCopyLocked(err)
+			s.quotaErr = s.errTextLocked(err)
+			s.lastErr = s.quotaErr
+			s.publishLocked()
+			keep = true
+		}
+		s.mu.Unlock()
+		if !keep {
+			return q, "", "", false
+		}
+		return codexapi.QuotaSnapshot{}, shown, empty, true
 	}
-	return q, s.apply(auth, gen, func() { s.quota, s.quotaErr, s.statusFail = &q, "", false })
+	if !s.apply(auth, gen, func() { s.quota, s.quotaErr, s.statusFail = &q, "", false }) {
+		return q, "", "", false
+	}
+	return q, "", "", true
+}
+
+// noteHeatmapLocked explains an empty or local-only token chart. The caller holds s.mu.
+func (s *Service) noteHeatmapLocked(now time.Time) {
+	generic := s.lc.Text(l10n.KeyTokenUsageHeatmapUnavailable)
+	hasLocal := len(s.heat.Local) > 0
+	hasOfficial := len(s.heat.AllDevices) > 0
+	if hasLocal || hasOfficial {
+		if hasLocal && !hasOfficial {
+			s.heat.Note = s.lc.CodexNotice("heat_local")
+		}
+		if s.lastErr == generic {
+			s.lastErr = ""
+		}
+		return
+	}
+	s.heat.Note = s.lc.CodexNotice("heat_empty")
+	s.heat.CalculatedAt = now
+	if s.lastErr == "" || s.lastErr == generic {
+		s.lastErr = s.heat.Note
+	}
 }
 
 // RefreshTokenHeatmap rescans the token usage chart alone. It can be

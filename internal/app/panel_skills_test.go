@@ -96,7 +96,7 @@ func skillsPanel(t *testing.T, res map[store.Provider]skills.Summary) (*App, *ui
 func TestPanelSkillsCardSummarizesAndOpensPage(t *testing.T) {
 	l := l10n.New(l10n.English)
 	a, tt, _, calls := skillsPanel(t, skillsFixture())
-	for _, text := range []string{tx(l, xSkillsTitle), tx(l, xSkillsSummary, 3, 1), tx(l, xSkillsIssueCount, 1), tx(l, xSkillsManage)} {
+	for _, text := range []string{tx(l, xSkillsTitle), tx(l, xSkillsSummary, 3, 1), tx(l, xSkillsIssueBrokenLink) + " · gone", tx(l, xSkillsFix), tx(l, xSkillsManage)} {
 		if !hasExact(tt, text) {
 			t.Fatalf("skills card missing %q; texts %q", text, tt.Texts())
 		}
