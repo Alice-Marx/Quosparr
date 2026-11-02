@@ -51,6 +51,12 @@ func (rt *liveApp) enqueuePreferences(p store.Preferences) {
 }
 
 func (rt *liveApp) requestRefresh(s *Settings, section runway.Section) {
+	if s != nil && s.Prefs().SelectedProvider == store.ProviderGrokBot {
+		if rt.host != nil {
+			rt.host.refreshGrokBot()
+		}
+		return
+	}
 	var p *store.Preferences
 	if s != nil {
 		current := s.Prefs()

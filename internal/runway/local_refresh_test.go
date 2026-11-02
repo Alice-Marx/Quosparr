@@ -81,6 +81,19 @@ func TestOpeningThePanelLoadsOnlyItsProviderLocalData(t *testing.T) {
 	}
 }
 
+func TestSwitchingToGrokBotDoesNotScanLocalProviders(t *testing.T) {
+	s, f, g, c, reports := localService(t)
+	showPanel(s)
+	before := localCounts(f, reports)
+	p := s.Preferences()
+	p.SelectedProvider = store.ProviderGrokBot
+	s.SetPreferences(p)
+	settle(t, s)
+	if localCounts(f, reports) != before || g.localCount() != 0 || c.localCount() != 0 {
+		t.Fatalf("grok bot switch scanned local data: codex %v grok %d claude %d", localCounts(f, reports), g.localCount(), c.localCount())
+	}
+}
+
 func TestSwitchingWithThePanelClosedLoadsNothing(t *testing.T) {
 	s, _, g, c, _ := localService(t)
 	p := s.Preferences()

@@ -90,6 +90,7 @@ type App struct {
 	snapMu    sync.Mutex
 	snap      runway.Snapshot
 	panelActs PanelActions
+	grokBot   grokBotHold
 
 	backgroundReady bool
 	stopBackground  func()

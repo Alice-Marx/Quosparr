@@ -1,6 +1,7 @@
 package app
 
 import (
+	"slices"
 	"time"
 
 	"github.com/egoist/mygo/ui"
@@ -26,8 +27,12 @@ func panelHeader(c *ui.Context, a *App, l l10n.Localizer, prefs store.Preference
 			ui.Spacer(c).Grow(1)
 			panelHeaderButtons(c, a, l, prefs, acts, panelBusy(snap, grokView))
 		})
-		if providers := prefs.PanelSelection(); len(providers) > 1 {
+		if providers := grokBotTabs(prefs.PanelSelection()); len(providers) > 1 {
 			providerStrip(c, a, l, snap, providers, prefs.SelectedProvider, acts.SelectProvider)
+		}
+		if prefs.SelectedProvider == store.ProviderGrokBot {
+			grokBotIdentityRow(c, l, a)
+			return
 		}
 		if grokView {
 			grokIdentityRow(c, a, l, prefs, snap)
@@ -54,6 +59,16 @@ func panelBusy(snap runway.Snapshot, grokView bool) bool {
 	return snap.Refresh.Refreshing()
 }
 
+// grokBotTabs appends the assistant tab. It is not one of the CLI providers
+// the settings list can hide, and its label is never the Grok CLI name.
+func grokBotTabs(providers []store.Provider) []store.Provider {
+	out := slices.Clone(providers)
+	if !slices.Contains(out, store.ProviderGrokBot) {
+		out = append(out, store.ProviderGrokBot)
+	}
+	return out
+}
+
 // providerStrip splits the width evenly among the shown providers, and is
 // left out when only one is shown: each tab is the
 // logo and name over the remaining share of the account's shortest quota
@@ -63,7 +78,7 @@ func providerStrip(c *ui.Context, a *App, l l10n.Localizer, snap runway.Snapshot
 	t := c.Theme()
 	ui.Row(c).Gap(6).Padding(10, 0, 0, 0).Children(func() {
 		for _, p := range providers {
-			name := l.Text(providerKey(p))
+			name := providerLabel(l, p)
 			selected := p == cur
 			tab := ui.ButtonBase(c.Key("provider-tab-"+string(p))).Label(name).Disabled(selectFn == nil).
 				Grow(1).Basis(0).Padding(6, 10, 7, 10).Radius(radiusRow).Cursor(ui.CursorPointer)
@@ -86,7 +101,11 @@ func providerStrip(c *ui.Context, a *App, l l10n.Localizer, snap runway.Snapshot
 						ProviderMonoIcon(c, p, 16).TextColor(inkTertiary(t))
 						ui.Text(c, name).FontSize(fsCallout).TextColor(inkTertiary(t)).SingleLine()
 					})
-					meter, ok := runway.ShortestWindowMeter(providerMeters(snap, p))
+					meters := providerMeters(snap, p)
+					if p == store.ProviderGrokBot {
+						meters = a.grokBotMeters(time.Now())
+					}
+					meter, ok := runway.ShortestWindowMeter(meters)
 					stripBar(c, meter, ok, selected)
 				})
 			})
@@ -166,6 +185,10 @@ func panelHeaderButtons(c *ui.Context, a *App, l l10n.Localizer, prefs store.Pre
 // refreshEverything is the header refresh: all sections, plus the open
 // cost query or reaction when a page that shows them is open.
 func refreshEverything(a *App, acts PanelActions) {
+	if a.settings != nil && a.settings.Prefs().SelectedProvider == store.ProviderGrokBot {
+		a.refreshGrokBot()
+		return
+	}
 	acts.Refresh()
 	if a.settings.Prefs().ShowsCacheAnalysis && acts.QueryCache != nil {
 		a.startCacheSummary(acts)

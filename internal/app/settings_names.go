@@ -8,6 +8,13 @@ import (
 
 // Titles of the option values, as the Swift settings show them.
 
+func providerLabel(l l10n.Localizer, v store.Provider) string {
+	if v == store.ProviderGrokBot {
+		return tx(l, xGrokBotTab)
+	}
+	return l.Text(providerKey(v))
+}
+
 func providerKey(v store.Provider) l10n.Key {
 	switch v {
 	case store.ProviderGrok:

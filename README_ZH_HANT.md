@@ -14,6 +14,8 @@ Quosparr 是適用於 macOS、Windows、Linux 的原生選單列 / 系統匣應�
 
 </div>
 
+> 本儲存庫是 [Alice-Marx 對 Licoy/Quosparr 的 fork](https://github.com/Alice-Marx/Quosparr)，上游為 [Licoy/Quosparr](https://github.com/Licoy/Quosparr)，遵循 GNU Affero General Public License v3.0（[LICENSE](LICENSE)）。Alice 增加的是獨立的 **Grok Bot 助手**每週額度面板。Grok Bot 助手**沒有公開的第三方計費 API**。面板只讀取本機 JSON 快照，不抓取 Cookie、Grok Bot 設定頁或 Cursor 儀表板，本 fork 也不附帶寫入該快照的例程。
+
 ## 亮點
 
 **Codex**
@@ -42,6 +44,13 @@ Quosparr 是適用於 macOS、Windows、Linux 的原生選單列 / 系統匣應�
 - 透過官方 CLI chat-proxy 計費介面，查看包含額度、Build / Imagine / Chat 拆分、週 / 月週期、預付餘額和按需使用量。
 - 多個 OAuth / SuperGrok 帳號：隔離登入、匯入目前登入、貼上憑證、重新整理、別名、排序與明確切換帳號。
 - 查看本機 Grok CLI 日誌中的最近工作階段。
+
+**Grok Bot 助手**
+
+- 面板標籤為 **Grok Bot 助手**（英文 **Grok Bot**），始終顯示，並與 **Grok** CLI 標籤分開。它不是 Grok CLI 的帳號、工作階段或計費檢視。
+- 顯示已用百分比、重設時間與隨需用量摘要。快照帶有拆分時，顯示占比最高的機器人與活動。
+- 重新整理會監視快照檔案的修改時間，標題列重新整理也只重讀該檔案。沒有快照時，空白狀態會說明匯入路徑。
+- **匯入 JSON** 會在驗證後把所選檔案寫入快照路徑。未知欄位（含 token）會被捨棄。本儲存庫沒有內建寫入程式。可複製 [`examples/grokbot-usage.json`](examples/grokbot-usage.json)，或自行取代該檔案。之後的例程應在同一目錄寫入暫存檔，再改名取代。
 
 **三個供應商通用**
 
@@ -132,6 +141,7 @@ Linux 需要 GTK3、AppIndicator、支援系統匣的桌面環境，以及可用
   ```
 
 - Grok 帳號與額度僅支援 OAuth / SuperGrok 及相容的 legacy session。可執行 `grok login --oauth`、在應用程式內登入、匯入目前登入，或貼上憑證 JSON。僅使用 API Key 的登入不會加入託管帳號。若已設定 `GROK_HOME` 則使用該目錄，否則使用 `~/.grok`。
+- Grok Bot 助手面板不需要 Grok CLI。它只讀取 `~/.quosparr/grokbot-usage.json`（Windows 為 `%USERPROFILE%\.quosparr\grokbot-usage.json`）。把 [`examples/grokbot-usage.json`](examples/grokbot-usage.json) 複製到該路徑，或在該面板使用 **匯入 JSON**。
 
 ## 桌面小工具
 
@@ -158,6 +168,7 @@ Linux 需要 GTK3、AppIndicator、支援系統匣的桌面環境，以及可用
 - 新增 skill 時先列出來源中的檔案，只把 skill 所在目錄讀入記憶體，確認後才寫入，大型儲存庫只多花下載時間、不多占記憶體，也不執行其中的指令碼；GitHub 來源只經 HTTPS 存取 GitHub，並遵循代理設定。已新增 skill 的來源（儲存庫、分支、提交、儲存庫內目錄或本機路徑）記錄在 `~/.quosparr/skill-sources.json`（`0600`），不含任何金鑰。
 - API 等價成本依本機工作階段日誌計算，不會上傳工作階段內容。
 - token 與 API Key 絕不會寫入日誌、自我檢查輸出或 issue 範本。
+- Grok Bot 助手快照只含非金鑰的用量統計。匯入文件裡的 token、Cookie 與 API Key 會被捨棄，也不會寫入日誌。
 - Codex 重設動態與更新檢查只讀取公開資料，不會傳送帳號、token 或工作階段內容。
 
 ## 資料來源
@@ -168,6 +179,7 @@ Linux 需要 GTK3、AppIndicator、支援系統匣的桌面環境，以及可用
 - **Claude Code 訂閱用量**：來自未公開的 OAuth usage 端點，只表示目前的 Claude Code 訂閱，不寫成官方計費介面。不讀取瀏覽器 Cookie 或 Console API 帳單，Desktop 設定檔僅由上述獨立且明確確認的功能管理。
 - **Claude API 等價成本**：依 Claude Code 本機工作階段日誌與價格表 `anthropic-builtin-2026-10-14` 計算。同一則回覆按訊息 ID 只計一次。快取寫入分為 5 分鐘與 1 小時，Fast 檔單獨計價。未知模型不報告精確費用。按日統計使用本地時區。
 - **Grok 額度**：僅使用官方 CLI chat-proxy 的 `/v1/billing?format=credits` 端點。不讀取瀏覽器 Cookie，不從本機日誌推算額度，也不混入 API 帳單。
+- **Grok Bot 助手每週額度**：只使用本機 JSON 快照，schema 版本 1，路徑為 `~/.quosparr/grokbot-usage.json`（Windows 為 `%USERPROFILE%\.quosparr\grokbot-usage.json`）。沒有公開的第三方計費 API。範例與欄位見 [`examples/grokbot-usage.json`](examples/grokbot-usage.json)：`schemaVersion`、`fetchedAt`、`plan`、`usedPercent`、`resetAt`、`onDemand.status`、`periodLabel`、`breakdown[].bot`、`breakdown[].sharePercent`、`breakdown[].activities[].name`、`breakdown[].activities[].sharePercent`、`notes`。`schemaVersion` 必須為 `1`。`usedPercent` 為 0 到 100。時間為 RFC3339。該檔案是非金鑰用量統計，權限 `0600`。可從面板匯入，或把範例複製到該路徑。取代檔案須以原子方式完成：先在同一目錄寫暫存檔，再改名。本應用程式不讀取 Cookie、Grok Bot 設定頁或 Cursor 儀表板。
 - **Grok API 等價成本**：依本機 `turn_completed` 用量與價格表 `xai-builtin-2026-09-27` 計算，區分輸入、快取、輸出及長上下文費率。`costUsdTicks` 屬於訂閱額度記帳，不作為 API 等價成本。
 - **Codex 重設動態**：來自公開來源 [didcodexreset.com/api/status.json](https://didcodexreset.com/api/status.json)。非官方，僅供參考，可能延遲。
 - 圖表中的「官方統計（多端）」屬於目前帳號，「本機日誌（全部本機工作階段）」掃描本機，可能跨越多個帳號。兩者並非包含關係，不應相減；Codex 兩種每日數值皆以 UTC 日界計算。
@@ -198,6 +210,12 @@ HOME="$QUOSPARR_TEST_HOME" QUOSPARR_PREFS_DOMAIN=com.quosparr.app.v1-test go run
 V1_DEVELOPMENT_PACKAGE=1 bash Scripts/package-v1-app.sh
 ```
 
+在已安裝 Go、Python 3 與 NSIS `makensis` 的機器上建置 Windows amd64 開發包（停用更新器）。輸出目錄為 `build/v1-windows-amd64/windows-amd64/`，其中包含 `Quosparr Setup <version> amd64.exe`：
+
+```bash
+V1_DEVELOPMENT_PACKAGE=1 bash Scripts/package-v1-platform.sh windows/amd64
+```
+
 Windows / Linux 打包與發佈檢查請見 [docs/v1-release.md](docs/v1-release.md)，貢獻說明請見 [CONTRIBUTORS.md](CONTRIBUTORS.md)。
 
 ## 社群支援
@@ -206,4 +224,4 @@ Windows / Linux 打包與發佈檢查請見 [docs/v1-release.md](docs/v1-release
 
 ## 授權條款
 
-本專案遵循儲存庫中的 [LICENSE](LICENSE)。
+本 fork 遵循 GNU Affero General Public License v3.0（[LICENSE](LICENSE)），是 [Licoy/Quosparr](https://github.com/Licoy/Quosparr) 的 fork。

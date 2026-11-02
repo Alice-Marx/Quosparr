@@ -44,7 +44,7 @@ func DecodePreferences(data []byte) (Preferences, error) {
 func readPreferences(r *reader) Preferences {
 	p := DefaultPreferences()
 	p.ModelPricing = readModelPricing(r)
-	p.SelectedProvider = readEnumOrDefault(r, "selectedProvider", p.SelectedProvider, Provider.Valid)
+	p.SelectedProvider = readEnumOrDefault(r, "selectedProvider", p.SelectedProvider, Provider.PanelSelectable)
 	p.Language = readEnumOrDefault(r, "language", p.Language, Language.Valid)
 	p.Appearance = readEnumOrDefault(r, "appearance", p.Appearance, Appearance.Valid)
 	p.MainPanelBackgroundStyle = readEnumOrDefault(r, "mainPanelBackgroundStyle", p.MainPanelBackgroundStyle, PanelBackground.Valid)
@@ -105,7 +105,7 @@ func (p Preferences) Validate() error {
 		key string
 		ok  bool
 	}{
-		{"selectedProvider", p.SelectedProvider.Valid()},
+		{"selectedProvider", p.SelectedProvider.PanelSelectable()},
 		{"language", p.Language.Valid()},
 		{"appearance", p.Appearance.Valid()},
 		{"mainPanelBackgroundStyle", p.MainPanelBackgroundStyle.Valid()},

@@ -14,6 +14,8 @@ Quosparr is a native menu bar / system tray app for macOS, Windows, and Linux. I
 
 </div>
 
+> This repository is [Alice-Marx's fork](https://github.com/Alice-Marx/Quosparr) of [Licoy/Quosparr](https://github.com/Licoy/Quosparr), under the GNU Affero General Public License v3.0 ([LICENSE](LICENSE)). Alice's change is a separate **Grok Bot assistant** weekly quota panel. Grok Bot assistant has **no public third-party billing API**. The panel reads a local JSON snapshot only. It does not scrape cookies, Grok Bot settings pages, or Cursor dashboards, and this fork does not ship a routine that writes the snapshot.
+
 ## Highlights
 
 **Codex**
@@ -42,6 +44,13 @@ Quosparr is a native menu bar / system tray app for macOS, Windows, and Linux. I
 - Included quota, Build / Imagine / Chat breakdown, weekly / monthly periods, prepaid balance, and on-demand usage via the official CLI chat-proxy billing API.
 - Multiple OAuth / SuperGrok accounts with isolated sign-in, current-login import, credential paste, refresh, aliases, ordering, and explicit switching.
 - Recent sessions from local Grok CLI logs.
+
+**Grok Bot assistant**
+
+- A panel tab labeled **Grok Bot** (简体中文: **Grok Bot 助手**), always shown and separate from the **Grok** CLI tab. It is not a Grok CLI account, session, or billing view.
+- Shows used percent, reset time, and an on-demand summary. When the snapshot includes a breakdown, it shows the top bots and activities.
+- Refresh watches the snapshot file's modification time, and the header refresh reloads that file. An empty snapshot explains the import path.
+- **Import JSON** copies a chosen file into the snapshot path after validation. Unknown fields, including tokens, are dropped. There is no built-in writer. Copy [`examples/grokbot-usage.json`](examples/grokbot-usage.json), or replace the file yourself. A later routine should write a temporary file in the same directory and rename it into place.
 
 **All providers**
 
@@ -132,6 +141,7 @@ Linux needs GTK3, AppIndicator, a desktop with tray support, and a working Secre
   ```
 
 - Grok accounts and quota support OAuth / SuperGrok and compatible legacy sessions only. Run `grok login --oauth`, sign in from the app, import the current login, or paste credential JSON. API-key-only logins are not added as managed accounts. `GROK_HOME` is used when set, otherwise `~/.grok`.
+- The Grok Bot assistant panel does not need the Grok CLI. It reads only `~/.quosparr/grokbot-usage.json` (`%USERPROFILE%\.quosparr\grokbot-usage.json` on Windows). Copy [`examples/grokbot-usage.json`](examples/grokbot-usage.json) there, or use **Import JSON** on that panel.
 
 ## Desktop Widgets
 
@@ -158,6 +168,7 @@ Changes apply only after **Save Proxy Settings**. **Test Connection** fetches th
 - Adding a skill lists the source first and reads only the skills' folders into memory before anything is written, so a large repository costs download time but not memory; it never runs their scripts; GitHub sources are fetched over HTTPS from GitHub only, through the proxy settings. Where each added skill came from (repository, ref, commit, folder in the repository, or the local path) is kept in `~/.quosparr/skill-sources.json` (`0600`), which holds no secrets.
 - API-equivalent cost is computed from local session logs. Session contents are not uploaded.
 - Tokens and API keys are never written to logs, self-check output, or issue templates.
+- The Grok Bot assistant snapshot holds non-secret usage statistics. Tokens, cookies, and API keys found in an imported document are dropped and are not written to logs.
 - Codex Reset Updates and update checks fetch only public data; no account, token, or session content is sent.
 
 ## Data Sources
@@ -168,6 +179,7 @@ Changes apply only after **Save Proxy Settings**. **Test Connection** fetches th
 - **Claude Code subscription usage**: an undocumented OAuth usage endpoint for the signed-in Claude Code subscription. It is not described as an official billing API. No browser cookies or Console API bill; Desktop profiles are managed only by the separate, explicitly confirmed feature above.
 - **Claude API-equivalent cost**: local Claude Code session logs priced with `anthropic-builtin-2026-10-14`. Replies are counted once by message id. Cache writes are split into 5-minute and 1-hour rates, and Fast mode has its own rates. Unknown models are not reported as exact costs. Days use the local time zone.
 - **Grok quota**: only the official CLI chat-proxy `/v1/billing?format=credits` endpoint. No browser cookies, no quota inferred from local logs, and no API billing mixed in.
+- **Grok Bot assistant weekly quota**: a local JSON snapshot only, schema version 1, at `~/.quosparr/grokbot-usage.json` (`%USERPROFILE%\.quosparr\grokbot-usage.json` on Windows). There is no public third-party billing API. The sample and field list are in [`examples/grokbot-usage.json`](examples/grokbot-usage.json): `schemaVersion`, `fetchedAt`, `plan`, `usedPercent`, `resetAt`, `onDemand.status`, `periodLabel`, `breakdown[].bot`, `breakdown[].sharePercent`, `breakdown[].activities[].name`, `breakdown[].activities[].sharePercent`, and `notes`. `schemaVersion` must be `1`. `usedPercent` is from 0 to 100. Times are RFC3339. The file is non-secret usage stats, written with mode `0600`. Import it from the panel, or copy the sample onto that path. Replace the file atomically: write a temporary file in the same directory, then rename it. This app does not read cookies, Grok Bot settings pages, or Cursor dashboards.
 - **Grok API-equivalent cost**: local `turn_completed` usage priced with `xai-builtin-2026-09-27`, covering input, cached, output, and long-context rates. `costUsdTicks` is subscription accounting and is not used as API-equivalent cost.
 - **Codex Reset Updates**: the public feed at [didcodexreset.com/api/status.json](https://didcodexreset.com/api/status.json). Unofficial, advisory only, and may be delayed.
 - In the chart, “Official stats (all devices)” belongs to the current account, while “Local logs (all sessions)” scans this machine and may span accounts. They are not a subset of each other and should not be subtracted; Codex daily values for both use UTC days.
@@ -198,6 +210,12 @@ Build a macOS development package (updater disabled; optionally `ARCH=arm64` or 
 V1_DEVELOPMENT_PACKAGE=1 bash Scripts/package-v1-app.sh
 ```
 
+Build a Windows amd64 development package on a machine with Go, Python 3, and NSIS `makensis` (updater disabled). The output directory is `build/v1-windows-amd64/windows-amd64/`, including `Quosparr Setup <version> amd64.exe`:
+
+```bash
+V1_DEVELOPMENT_PACKAGE=1 bash Scripts/package-v1-platform.sh windows/amd64
+```
+
 See [docs/v1-release.md](docs/v1-release.md) for Windows / Linux packaging and release checks, and [CONTRIBUTORS.md](CONTRIBUTORS.md) for contribution notes.
 
 ## Community
@@ -206,4 +224,4 @@ See [docs/v1-release.md](docs/v1-release.md) for Windows / Linux packaging and r
 
 ## License
 
-This project follows the repository [LICENSE](LICENSE).
+This fork is licensed under the GNU Affero General Public License v3.0 ([LICENSE](LICENSE)). It is a fork of [Licoy/Quosparr](https://github.com/Licoy/Quosparr).
