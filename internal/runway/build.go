@@ -198,25 +198,29 @@ func (s *Service) windowText(w codexapi.RateWindow, now time.Time) string {
 func (s *Service) creditsViewLocked(v *CodexView) {
 	lc := s.lc
 	c := s.credits
-	switch {
-	case s.creditsErr != "":
-		v.ResetCreditsText = lc.Text(l10n.KeyStatusError)
-		v.ResetCreditLines = []DetailLine{{lc.Text(l10n.KeyError), s.creditsErr}}
-	case c != nil:
+	if c != nil {
 		sum := SummarizeCredits(*c)
 		v.ResetCreditSummary = &sum
 		v.CreditDetails = CreditDetails(lc, *c)
 		v.ResetCreditsText, v.ResetCreditLines = s.creditsText(*c, sum)
-	case s.loggedOut:
+	}
+	if s.creditsErr != "" {
+		if c == nil {
+			v.ResetCreditsText = s.creditsErr
+			v.ResetCreditLines = []DetailLine{{Title: lc.Text(l10n.KeyError), Value: s.creditsErr}}
+		} else {
+			v.ResetCreditLines = append(v.ResetCreditLines, DetailLine{Title: lc.Text(l10n.KeyError), Value: s.creditsErr})
+		}
+		return
+	}
+	if c != nil {
+		return
+	}
+	if s.loggedOut {
 		v.ResetCreditsText = lc.Text(l10n.KeyStatusLogin)
-	default:
-		v.ResetCreditsText = lc.Text(l10n.KeyNotLoaded)
+		return
 	}
-	if s.creditsErr != "" && c != nil {
-		sum := SummarizeCredits(*c)
-		v.ResetCreditSummary = &sum
-		v.CreditDetails = CreditDetails(lc, *c)
-	}
+	v.ResetCreditsText = lc.Text(l10n.KeyNotLoaded)
 }
 
 func (s *Service) creditsText(c codexapi.ResetCreditsSnapshot, sum ResetCreditSummary) (string, []DetailLine) {
@@ -259,6 +263,10 @@ func (s *Service) costViewLocked(v *CodexView, now time.Time) {
 	}
 }
 
+func sessionLeftovers(r sessions.Report) int {
+	return len(r.MissingIndexIDs) + len(r.OrphanIndexIDs) + len(r.DuplicateIndexIDs) + len(r.StaleTitleIDs)
+}
+
 func (s *Service) sessionsViewLocked(v *CodexView) {
 	lc := s.lc
 	switch {
@@ -274,6 +282,9 @@ func (s *Service) sessionsViewLocked(v *CodexView) {
 			planned = s.report.PlannedEntries
 		}
 		v.SessionText = fmt.Sprintf("%s %d. %s: %s", lc.Text(l10n.KeyRebuilt), planned, lc.Text(l10n.KeyBackup), backup)
+		if s.report != nil && sessionLeftovers(*s.report) > 0 {
+			v.SessionText += " · " + lc.CodexNotice("repair_left")
+		}
 	case s.sessErr != "":
 		v.SessionText = lc.Text(l10n.KeySessionScanFailed)
 	case s.report != nil:
@@ -285,6 +296,9 @@ func (s *Service) sessionsViewLocked(v *CodexView) {
 	}
 	if s.sessErr != "" {
 		v.SessionLines = []DetailLine{{lc.Text(l10n.KeyError), s.sessErr}}
+	}
+	if s.repairQueued && !s.repairDone && s.repairErr == "" {
+		v.SessionText += " · " + lc.CodexNotice("repair_queued")
 	}
 	if s.report != nil {
 		r := *s.report

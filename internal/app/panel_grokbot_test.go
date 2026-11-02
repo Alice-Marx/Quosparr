@@ -50,7 +50,7 @@ func TestGrokBotPanelIsSeparateFromGrokCLI(t *testing.T) {
 	a.grokBot.path = filepath.Join(t.TempDir(), grokbot.FileName)
 	a.grokBot.mu.Unlock()
 	tt.Frame()
-	for _, want := range []string{"Cursor Pro", "6.7", "89", "chats", tx(l, xGrokBotOnDemandUnlimited), tx(l, xGrokBotTitle)} {
+	for _, want := range []string{"Cursor Pro", "6.7", "89", "chats", tx(l, xGrokBotOnDemandUnlimited), tx(l, xGrokBotTitle), tx(l, xGrokBotBurnTitle), tx(l, xGrokBotRepairNA), "命中率 12.5%"} {
 		if !tt.HasText(want) {
 			t.Fatalf("missing %q in %q", want, tt.Texts())
 		}

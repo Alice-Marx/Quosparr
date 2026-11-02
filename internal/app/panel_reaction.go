@@ -13,6 +13,7 @@ type panelReactionState struct {
 	generation  uint64
 	cancel      context.CancelFunc
 	task        Task
+	failedClick bool
 	snapshot    *resettoday.ReactionSnapshot
 	delta       int
 	deltaAt     time.Time
@@ -70,7 +71,16 @@ func (a *App) startReaction(acts PanelActions, click bool) {
 }
 
 func (s *panelReactionState) finish(before *resettoday.ReactionSnapshot, snap resettoday.ReactionSnapshot, click bool, err error) {
+	if !click {
+		s.task = Task{}
+		s.failedClick = false
+		if err == nil {
+			s.snapshot = &snap
+		}
+		return
+	}
 	s.task = Task{Err: err}
+	s.failedClick = err != nil
 	if err == nil {
 		if click && before != nil {
 			optimistic := resettoday.OptimisticClick(*before)

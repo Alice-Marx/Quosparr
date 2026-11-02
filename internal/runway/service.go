@@ -142,19 +142,21 @@ type Service struct {
 	progressCount   int
 	progressReports *usage.ProgressReporter
 
-	report       *sessions.Report
-	reportAt     time.Time
-	sessErr      string
-	repairDone   bool
-	repairBackup string
-	repairErr    string
-	recent       []sessions.Item
-	recentAt     time.Time
-	recentErr    string
-	recentSet    bool
-	speed        *speed.Report
-	speedAt      time.Time
-	speedErr     string
+	report          *sessions.Report
+	reportAt        time.Time
+	sessErr         string
+	repairDone      bool
+	repairQueued    bool
+	repairAfterFull bool
+	repairBackup    string
+	repairErr       string
+	recent          []sessions.Item
+	recentAt        time.Time
+	recentErr       string
+	recentSet       bool
+	speed           *speed.Report
+	speedAt         time.Time
+	speedErr        string
 
 	index          codex.AccountIndex
 	indexLoaded    bool

@@ -1,8 +1,11 @@
 package app
 
 import (
+	"time"
+
 	"github.com/egoist/mygo/ui"
 	"github.com/licoy/quosparr/internal/l10n"
+	"github.com/licoy/quosparr/internal/netx"
 	"github.com/licoy/quosparr/internal/runway"
 	"github.com/licoy/quosparr/internal/store"
 )
@@ -98,11 +101,20 @@ func panelStatusLines(c *ui.Context, l l10n.Localizer, prefs store.Preferences, 
 	case store.ProviderClaude:
 		message, failure = snap.Claude.Accounts.Message, snap.Claude.LastError
 	}
-	if message == "" && failure == "" {
+	notice := ""
+	if prefs.SelectedProvider != store.ProviderGrok && prefs.SelectedProvider != store.ProviderClaude && prefs.SelectedProvider != store.ProviderGrokBot {
+		if n, ok := netx.NoteFallback(); ok && n.DirectOK && time.Since(n.At) < 10*time.Minute {
+			notice = l.ProxyDirectUsed(n.Endpoint)
+		}
+	}
+	if message == "" && failure == "" && notice == "" {
 		return
 	}
 	t := c.Theme()
 	ui.Column(c).Gap(3).Padding(0, 16, 6, 16).Children(func() {
+		if notice != "" {
+			ui.Text(c, notice).FontSize(fsCaption).TextColor(inkSecondary(t))
+		}
 		if message != "" {
 			ui.Text(c, message).FontSize(fsCaption).TextColor(inkSecondary(t))
 		}

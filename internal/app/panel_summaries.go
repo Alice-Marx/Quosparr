@@ -130,6 +130,9 @@ func panelCredits(c *ui.Context, l l10n.Localizer, snap runway.Snapshot, acts Pa
 			title: l.Text(l10n.KeyResetCredits), refreshing: busy, refresh: sectionRefresh(acts, runway.SectionResetCredits),
 		})
 		if sum == nil || busy && snap.Provider == store.ProviderClaude && snap.Claude.UpdatedAt.IsZero() && snap.Claude.ResetCredits == nil {
+			if sum == nil && creditStatusText(c, l, snap.Codex) {
+				return
+			}
 			sectionEmpty(c, l, busy)
 			return
 		}
@@ -139,6 +142,15 @@ func panelCredits(c *ui.Context, l l10n.Localizer, snap runway.Snapshot, acts Pa
 			st.detail = store.ModuleResetCredits
 		}
 	})
+}
+
+func creditStatusText(c *ui.Context, l l10n.Localizer, v runway.CodexView) bool {
+	text := v.ResetCreditsText
+	if text == "" || text == l.Text(l10n.KeyNotLoaded) || text == l.Text(l10n.KeyStatusLogin) {
+		return false
+	}
+	ui.Text(c, text).FontSize(fsCallout).TextColor(sys(c.Theme(), sysOrange))
+	return true
 }
 
 func creditsHero(c *ui.Context, l l10n.Localizer, sum runway.ResetCreditSummary) {

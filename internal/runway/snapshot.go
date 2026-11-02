@@ -138,6 +138,8 @@ type HeatmapData struct {
 	CalculatedAt        time.Time
 	OfficialStatsAsOf   string
 	OfficialGeneratedAt time.Time
+	// Note explains a local-only or empty chart. Empty when the series is complete.
+	Note string
 }
 
 // Grid builds the heatmap/chart grid for a mode. It uses UTC days like the

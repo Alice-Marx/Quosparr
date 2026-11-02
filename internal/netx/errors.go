@@ -1,7 +1,9 @@
 // Package netx builds the explicit HTTP clients Quosparr uses for every
 // network request. Each client belongs to one immutable proxy context; nothing
-// here touches http.DefaultClient or http.DefaultTransport, and a proxy
-// failure is reported instead of silently connecting directly.
+// here touches http.DefaultClient or http.DefaultTransport. A refused or
+// timed-out proxy dial is retried once without the proxy. Invalid settings,
+// missing credentials, authentication failures, and system-proxy resolution
+// errors are reported and do not connect directly.
 package netx
 
 import (

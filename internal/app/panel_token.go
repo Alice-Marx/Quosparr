@@ -152,7 +152,14 @@ func modePicker(c *ui.Context, l l10n.Localizer, style store.ChartStyle, st *pan
 
 func panelChart(c *ui.Context, l l10n.Localizer, style store.ChartStyle, provider store.Provider, heat runway.HeatmapData, refreshing bool, st *panelState) {
 	empty := len(heat.AllDevices) == 0 && len(heat.Local) == 0
+	if heat.Note != "" && !empty {
+		dimText(c, heat.Note)
+	}
 	if empty {
+		if heat.Note != "" {
+			dimText(c, heat.Note)
+			return
+		}
 		sectionEmptyKey(c, l, refreshing, l10n.KeyHeatmapEmpty)
 		return
 	}

@@ -111,8 +111,8 @@ func TestRepairBacksUpAndRewritesIndex(t *testing.T) {
 	if string(repaired) != wantIndex {
 		t.Fatalf("index %q", repaired)
 	}
-	if !reflect.DeepEqual(result.MissingIndexIDs, []string{"s0", "s1"}) || !reflect.DeepEqual(result.OrphanIndexIDs, []string{"old"}) {
-		t.Fatalf("report %+v", result)
+	if len(result.MissingIndexIDs) != 0 || len(result.OrphanIndexIDs) != 0 || len(result.DuplicateIndexIDs) != 0 || len(result.StaleTitleIDs) != 0 {
+		t.Fatalf("post-repair report %+v", result)
 	}
 	// Only session_index.jsonl and its backup changed: session files are intact.
 	if b, _ := os.ReadFile(session); !bytes.Equal(b, sessionBefore) {

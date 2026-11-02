@@ -34,6 +34,9 @@ func panelSkills(c *ui.Context, l l10n.Localizer, snap runway.Snapshot, acts Pan
 		switch {
 		case ok:
 			skillsSummaryLines(c, l, sum)
+			if st.cacheOwner != nil {
+				st.cacheOwner.skillSummaryIssues(c, l, sum, acts)
+			}
 		case s.task.Err != nil:
 			ui.Text(c, tx(l, xSkillsScanFailed)).FontSize(fsCallout).TextColor(sys(c.Theme(), sysRed))
 		default:
@@ -46,15 +49,79 @@ func panelSkills(c *ui.Context, l l10n.Localizer, snap runway.Snapshot, acts Pan
 }
 
 func skillsSummaryLines(c *ui.Context, l l10n.Localizer, sum skills.Summary) {
-	t := c.Theme()
 	if len(sum.Skills) == 0 {
 		calloutDim(c, tx(l, xSkillsEmpty))
 	} else {
 		ui.Text(c, tx(l, xSkillsSummary, len(sum.Skills), skillsOff(sum))).FontSize(fsCallout).FontFeatures("tnum")
 	}
-	if n := len(sum.Issues); n > 0 {
-		ui.Text(c, tx(l, xSkillsIssueCount, n)).FontSize(fsCaption).TextColor(sys(t, sysOrange))
+}
+
+func (a *App) skillSummaryIssues(c *ui.Context, l l10n.Localizer, sum skills.Summary, acts PanelActions) {
+	if len(sum.Issues) == 0 {
+		return
 	}
+	t := c.Theme()
+	limit := len(sum.Issues)
+	if limit > 5 {
+		limit = 5
+	}
+	for i := 0; i < limit; i++ {
+		is := sum.Issues[i]
+		name := is.Name
+		if name == "" {
+			name = is.Path
+		}
+		line := skillIssueText(l, is.Kind)
+		if name != "" {
+			line += " · " + name
+		}
+		fixes := skillPanelFixes(acts.Skills, is)
+		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+			ui.Text(c, line).FontSize(fsCaption).TextColor(sys(t, sysOrange)).Grow(1).Basis(0)
+			if len(fixes) > 0 && fixes[0] != skills.FixAddDescription {
+				a.skillSummaryFix(c, l, sum, is, fixes[0], acts)
+			}
+		})
+		if len(fixes) == 1 && fixes[0] == skills.FixAddDescription {
+			dimText(c, tx(l, xSkillsFixDesc))
+		}
+	}
+	if extra := len(sum.Issues) - limit; extra > 0 {
+		dimText(c, tx(l, xSkillsIssueMore, extra))
+	}
+	skillsNotice(c, &a.panelState.skills)
+}
+
+func (a *App) skillSummaryFix(c *ui.Context, l l10n.Localizer, sum skills.Summary, is skills.Issue, fix skills.Fix, acts PanelActions) {
+	s := &a.panelState.skills
+	sk, _ := skillByFile(sum, is.Path)
+	id := "summary-fix\x00" + string(is.Kind) + "\x00" + is.Path
+	b := SmallPillButton(c.Key("skill-sum-"+is.Path), nil, tx(l, xSkillsFix), s.work.Running)
+	open := s.confirm == id
+	if b.Clicked() && !s.work.Running {
+		s.confirm, open = id, true
+	}
+	confirmPopover(c, l, b, &open, tx(l, xSkillsFixTitle, valueOr(is.Name, is.Path)), skillFixMessage(l, sum, is, sk, fix), tx(l, xSkillsFix), nil, func() {
+		a.runSkillWork(acts, xSkillsFixFailed, func() (string, error) {
+			return applySkillFix(l, acts.Skills, sum, is, sk, fix, "")
+		}, nil)
+	})
+	if !open && s.confirm == id {
+		s.confirm = ""
+	}
+}
+
+func skillPanelFixes(acts SkillActions, is skills.Issue) []skills.Fix {
+	fixes := availableSkillFixes(acts, is)
+	if is.Kind != skills.IssueBrokenLink || !is.Removable || acts.DeleteLink == nil {
+		return fixes
+	}
+	for _, f := range fixes {
+		if f == skills.FixRemoveLink {
+			return fixes
+		}
+	}
+	return append([]skills.Fix{skills.FixRemoveLink}, fixes...)
 }
 
 func skillsOff(sum skills.Summary) int {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"io"
 	"net"
 	"net/http"
 	"net/http/cookiejar"
@@ -153,8 +152,12 @@ func (c *Context) Do(req *http.Request) (*http.Response, error) {
 
 func (c *Context) newClient(policy Policy) *http.Client {
 	base := c.newTransport(policy)
+	endpoint := ""
+	if c.cfg.Mode != store.ProxyModeSystem {
+		endpoint = net.JoinHostPort(c.cfg.Host, strconv.Itoa(c.cfg.Port))
+	}
 	client := &http.Client{
-		Transport: &mappingTransport{base: base, manual: c.cfg.Mode != store.ProxyModeSystem},
+		Transport: &mappingTransport{base: base, manual: c.cfg.Mode != store.ProxyModeSystem, endpoint: endpoint},
 		Timeout:   policy.resourceTimeout(),
 	}
 	if policy == Standard {
@@ -218,21 +221,9 @@ func manualProxyURL(cfg store.NetworkProxyConfiguration, creds *Credentials) *ur
 // ErrConnectionFailed / ErrAuthenticationFailed kinds, as the Swift
 // mappedError does. The system mode passes errors through unchanged.
 type mappingTransport struct {
-	base   *http.Transport
-	manual bool
-}
-
-func (m *mappingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	resp, err := m.base.RoundTrip(req)
-	if err != nil {
-		return nil, m.mapError(req.Context(), err)
-	}
-	if m.manual && resp.StatusCode == http.StatusProxyAuthRequired {
-		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 4<<10))
-		_ = resp.Body.Close()
-		return nil, &Error{Kind: ErrAuthenticationFailed}
-	}
-	return resp, nil
+	base     *http.Transport
+	manual   bool
+	endpoint string
 }
 
 func (m *mappingTransport) CloseIdleConnections() { m.base.CloseIdleConnections() }

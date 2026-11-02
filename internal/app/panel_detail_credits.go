@@ -14,6 +14,9 @@ import (
 func creditsDetail(c *ui.Context, l l10n.Localizer, v runway.CodexView) {
 	sum := v.ResetCreditSummary
 	if sum == nil {
+		if creditStatusText(c, l, v) {
+			return
+		}
 		calloutDim(c, l.Text(l10n.KeyNotLoaded)).FontSize(fsBody)
 		return
 	}
