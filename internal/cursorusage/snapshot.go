@@ -57,6 +57,9 @@ type Snapshot struct {
 	FetchedAt     time.Time
 	Plan          string
 	Included      Included
+	// IncludedPools splits Included into Cursor Models and Other Models.
+	// Zero value means the object was absent.
+	IncludedPools IncludedPools
 	OnDemand      OnDemand
 	Breakdown     []Share
 	Notes         string
@@ -64,14 +67,39 @@ type Snapshot struct {
 	PeriodStart    time.Time
 	HasPeriodStart bool
 	History        []HistoryPoint
+	// GrokBotWeeklyRef is true when the file says the weekly assistant
+	// quota is in the Grok Bot snapshot. The percent itself is not stored.
+	GrokBotWeeklyRef bool
+}
+
+// HasModelPools reports whether either included model pool was present.
+func (s Snapshot) HasModelPools() bool {
+	return s.IncludedPools.CursorModels.Present || s.IncludedPools.OtherModels.Present
 }
 
 // Included is the plan allowance shown on the Cursor usage page.
+// UsedPercent stays required for schema 1, including when IncludedPools is set.
 type Included struct {
 	UsedPercent float64
 	ResetAt     time.Time
 	HasReset    bool
 	PeriodLabel string
+}
+
+// IncludedPools is the Cursor Models / Other Models split of the included
+// allowance. A pool is Present only when its object was in the file.
+type IncludedPools struct {
+	CursorModels Pool
+	OtherModels  Pool
+}
+
+// Pool is one included model allowance. Label and Note are optional; an
+// empty string means the panel should use its localized default.
+type Pool struct {
+	Present     bool
+	UsedPercent float64
+	Label       string
+	Note        string
 }
 
 // OnDemand is the on-demand allowance. Present is false when the object was
@@ -200,15 +228,28 @@ func formatMoney(v float64) string {
 }
 
 type rawSnapshot struct {
-	SchemaVersion *int         `json:"schemaVersion"`
-	FetchedAt     string       `json:"fetchedAt"`
-	Plan          string       `json:"plan"`
-	PeriodStart   string       `json:"periodStart"`
-	Included      *rawIncluded `json:"included"`
-	OnDemand      *rawOnDemand `json:"onDemand"`
-	Breakdown     []rawShare   `json:"breakdown"`
-	History       []rawHistory `json:"history"`
-	Notes         string       `json:"notes"`
+	SchemaVersion    *int         `json:"schemaVersion"`
+	FetchedAt        string       `json:"fetchedAt"`
+	Plan             string       `json:"plan"`
+	PeriodStart      string       `json:"periodStart"`
+	Included         *rawIncluded `json:"included"`
+	IncludedPools    *rawPools    `json:"includedPools"`
+	OnDemand         *rawOnDemand `json:"onDemand"`
+	Breakdown        []rawShare   `json:"breakdown"`
+	History          []rawHistory `json:"history"`
+	GrokBotWeeklyRef *bool        `json:"grokBotWeeklyRef"`
+	Notes            string       `json:"notes"`
+}
+
+type rawPools struct {
+	CursorModels *rawPool `json:"cursorModels"`
+	OtherModels  *rawPool `json:"otherModels"`
+}
+
+type rawPool struct {
+	UsedPercent *json.Number `json:"usedPercent"`
+	Label       string       `json:"label"`
+	Note        string       `json:"note"`
 }
 
 type rawIncluded struct {
@@ -268,6 +309,10 @@ func (r rawSnapshot) snapshot() (Snapshot, error) {
 	if err != nil {
 		return Snapshot{}, err
 	}
+	pools, err := parseIncludedPools(r.IncludedPools)
+	if err != nil {
+		return Snapshot{}, err
+	}
 	demand, err := parseOnDemand(r.OnDemand)
 	if err != nil {
 		return Snapshot{}, err
@@ -290,12 +335,14 @@ func (r rawSnapshot) snapshot() (Snapshot, error) {
 			HasReset:    hasReset,
 			PeriodLabel: period,
 		},
-		OnDemand:       demand,
-		Breakdown:      breakdown,
-		Notes:          notes,
-		PeriodStart:    start,
-		HasPeriodStart: hasStart,
-		History:        history,
+		IncludedPools:    pools,
+		OnDemand:         demand,
+		Breakdown:        breakdown,
+		Notes:            notes,
+		PeriodStart:      start,
+		HasPeriodStart:   hasStart,
+		History:          history,
+		GrokBotWeeklyRef: r.GrokBotWeeklyRef != nil && *r.GrokBotWeeklyRef,
 	}, nil
 }
 
@@ -315,6 +362,16 @@ func (s Snapshot) encoded() encodedSnapshot {
 	}
 	if s.HasPeriodStart {
 		out.PeriodStart = s.PeriodStart.Format(time.RFC3339)
+	}
+	if s.HasModelPools() {
+		pools := encodedPools{}
+		if s.IncludedPools.CursorModels.Present {
+			pools.CursorModels = encodePool(s.IncludedPools.CursorModels)
+		}
+		if s.IncludedPools.OtherModels.Present {
+			pools.OtherModels = encodePool(s.IncludedPools.OtherModels)
+		}
+		out.IncludedPools = &pools
 	}
 	if s.OnDemand.Present {
 		item := encodedOnDemand{Status: s.OnDemand.Status}
@@ -346,19 +403,41 @@ func (s Snapshot) encoded() encodedSnapshot {
 			}
 		}
 	}
+	out.GrokBotWeeklyRef = s.GrokBotWeeklyRef
 	return out
 }
 
+func encodePool(p Pool) *encodedPool {
+	return &encodedPool{
+		UsedPercent: json.Number(FormatPercent(p.UsedPercent)),
+		Label:       p.Label,
+		Note:        p.Note,
+	}
+}
+
 type encodedSnapshot struct {
-	SchemaVersion int              `json:"schemaVersion"`
-	FetchedAt     string           `json:"fetchedAt"`
-	Plan          string           `json:"plan,omitempty"`
-	PeriodStart   string           `json:"periodStart,omitempty"`
-	Included      encodedIncluded  `json:"included"`
-	OnDemand      *encodedOnDemand `json:"onDemand,omitempty"`
-	Breakdown     []encodedShare   `json:"breakdown,omitempty"`
-	History       []encodedHistory `json:"history,omitempty"`
-	Notes         string           `json:"notes,omitempty"`
+	SchemaVersion    int              `json:"schemaVersion"`
+	FetchedAt        string           `json:"fetchedAt"`
+	Plan             string           `json:"plan,omitempty"`
+	PeriodStart      string           `json:"periodStart,omitempty"`
+	Included         encodedIncluded  `json:"included"`
+	IncludedPools    *encodedPools    `json:"includedPools,omitempty"`
+	OnDemand         *encodedOnDemand `json:"onDemand,omitempty"`
+	Breakdown        []encodedShare   `json:"breakdown,omitempty"`
+	History          []encodedHistory `json:"history,omitempty"`
+	GrokBotWeeklyRef bool             `json:"grokBotWeeklyRef,omitempty"`
+	Notes            string           `json:"notes,omitempty"`
+}
+
+type encodedPools struct {
+	CursorModels *encodedPool `json:"cursorModels,omitempty"`
+	OtherModels  *encodedPool `json:"otherModels,omitempty"`
+}
+
+type encodedPool struct {
+	UsedPercent json.Number `json:"usedPercent"`
+	Label       string      `json:"label,omitempty"`
+	Note        string      `json:"note,omitempty"`
 }
 
 type encodedIncluded struct {
@@ -493,10 +572,48 @@ func optionalPeriod(raw string) (string, error) {
 	if raw == "" {
 		return "", nil
 	}
-	if !periodPattern.MatchString(raw) {
+	if periodPattern.MatchString(raw) {
+		return raw, nil
+	}
+	// A short display label, such as "Included in Pro", is also schema 1.
+	if !validLabel(raw, 80) {
 		return "", ErrField
 	}
 	return raw, nil
+}
+
+func parseIncludedPools(raw *rawPools) (IncludedPools, error) {
+	if raw == nil {
+		return IncludedPools{}, nil
+	}
+	cursor, err := parsePool(raw.CursorModels)
+	if err != nil {
+		return IncludedPools{}, err
+	}
+	other, err := parsePool(raw.OtherModels)
+	if err != nil {
+		return IncludedPools{}, err
+	}
+	return IncludedPools{CursorModels: cursor, OtherModels: other}, nil
+}
+
+func parsePool(raw *rawPool) (Pool, error) {
+	if raw == nil {
+		return Pool{}, nil
+	}
+	used, err := parsePercent(raw.UsedPercent, true)
+	if err != nil {
+		return Pool{}, ErrPercent
+	}
+	label, err := optionalLabel(raw.Label, 80)
+	if err != nil {
+		return Pool{}, err
+	}
+	note, err := optionalLabel(raw.Note, 200)
+	if err != nil {
+		return Pool{}, err
+	}
+	return Pool{Present: true, UsedPercent: used, Label: label, Note: note}, nil
 }
 
 func parseOnDemand(raw *rawOnDemand) (OnDemand, error) {

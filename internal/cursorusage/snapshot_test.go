@@ -53,6 +53,9 @@ func TestParseSample(t *testing.T) {
 	if len(snap.History) != 2 || snap.History[0].UsedPercent != 20 {
 		t.Fatalf("history = %+v", snap.History)
 	}
+	if snap.HasModelPools() || snap.GrokBotWeeklyRef {
+		t.Fatalf("legacy sample invented pools: %+v", snap.IncludedPools)
+	}
 	body, err := Marshal(snap)
 	if err != nil {
 		t.Fatal(err)
@@ -97,6 +100,12 @@ func TestParseRejectsUnsafeOrInvalidDocuments(t *testing.T) {
 		{"bad breakdown", `{` + base + `,"breakdown":[{"name":"","sharePercent":1}]}`, ErrBreakdown},
 		{"negative usd", `{` + base + `,"onDemand":{"status":"limited","usedUsd":-1}}`, ErrField},
 		{"bad status", `{` + base + `,"onDemand":{"status":"not a status"}}`, ErrField},
+		{"pool percent", `{` + base + `,"includedPools":{"cursorModels":{"usedPercent":101}}}`, ErrPercent},
+		{"pool missing percent", `{` + base + `,"includedPools":{"otherModels":{"label":"Other Models"}}}`, ErrPercent},
+		{"pool label", `{` + base + `,"includedPools":{"cursorModels":{"usedPercent":1,"label":"a\nb"}}}`, ErrField},
+		{"period label", `{` + base + `,"included":{"usedPercent":1,"periodLabel":"Included\nin Pro"}}`, ErrField},
+		{"weekly ref type", `{` + base + `,"grokBotWeeklyRef":"yes"}`, ErrJSON},
+		{"pools type", `{` + base + `,"includedPools":[]}`, ErrJSON},
 		{"grok bot shape", `{"schemaVersion":1,"fetchedAt":"2026-11-02T13:00:00Z","usedPercent":6.7,"breakdown":[{"bot":"Grok Bot","sharePercent":89}]}`, ErrField},
 	}
 	for _, tc := range cases {
@@ -168,6 +177,98 @@ func TestLoadMissing(t *testing.T) {
 	}
 }
 
+func TestParseIncludedPoolsStripsUnknownFields(t *testing.T) {
+	body := `{
+	  "schemaVersion": 1,
+	  "fetchedAt": "2026-11-02T14:00:00+08:00",
+	  "plan": "Pro",
+	  "included": {
+	    "usedPercent": 14,
+	    "resetAt": "2026-11-30T00:00:00+08:00",
+	    "periodLabel": "Included in Pro"
+	  },
+	  "includedPools": {
+	    "cursorModels": {
+	      "usedPercent": 14,
+	      "label": "Cursor Models",
+	      "note": "Includes Cursor Grok and Composer",
+	      "token": "DROP-ME-EXTRA"
+	    },
+	    "otherModels": { "usedPercent": 0, "label": "Other Models" }
+	  },
+	  "onDemand": { "status": "unlimited", "usedUsd": 0, "limitUsd": null },
+	  "grokBotWeeklyRef": true,
+	  "weeklyUsedPercent": 14
+	}`
+	snap, err := Parse([]byte(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if snap.Included.UsedPercent != 14 || snap.Included.PeriodLabel != "Included in Pro" || !snap.GrokBotWeeklyRef || !snap.HasModelPools() {
+		t.Fatalf("snapshot = %+v", snap)
+	}
+	if snap.IncludedPools.CursorModels.UsedPercent != 14 || snap.IncludedPools.CursorModels.Label != "Cursor Models" ||
+		snap.IncludedPools.CursorModels.Note != "Includes Cursor Grok and Composer" ||
+		snap.IncludedPools.OtherModels.UsedPercent != 0 || snap.IncludedPools.OtherModels.Note != "" {
+		t.Fatalf("pools = %+v", snap.IncludedPools)
+	}
+	if !snap.OnDemand.HasUsed || snap.OnDemand.UsedUSD != 0 || snap.OnDemand.HasLimit {
+		t.Fatalf("on demand = %+v", snap.OnDemand)
+	}
+	text := string(mustMarshal(t, snap))
+	if strings.Contains(text, "DROP-ME-EXTRA") || strings.Contains(text, "token") || strings.Contains(text, "weeklyUsedPercent") || strings.Contains(text, "limitUsd") {
+		t.Fatalf("canonical snapshot kept an unknown or null field:\n%s", text)
+	}
+	if !strings.Contains(text, `"grokBotWeeklyRef": true`) || !strings.Contains(text, `"cursorModels"`) || !strings.Contains(text, `"otherModels"`) {
+		t.Fatalf("canonical snapshot dropped a pool field:\n%s", text)
+	}
+	again, err := Parse([]byte(text))
+	if err != nil || again.IncludedPools.CursorModels.UsedPercent != 14 || !again.GrokBotWeeklyRef {
+		t.Fatalf("round trip = %+v err %v", again, err)
+	}
+}
+
+func TestIncludedPoolsMayBeOmitted(t *testing.T) {
+	snap, err := Parse([]byte(`{"schemaVersion":1,"fetchedAt":"2026-11-02T13:00:00Z","included":{"usedPercent":14},"includedPools":{},"grokBotWeeklyRef":null}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if snap.HasModelPools() || snap.GrokBotWeeklyRef || snap.Included.UsedPercent != 14 {
+		t.Fatalf("snapshot = %+v", snap)
+	}
+	if strings.Contains(string(mustMarshal(t, snap)), "includedPools") || strings.Contains(string(mustMarshal(t, snap)), "grokBotWeeklyRef") {
+		t.Fatal("empty pools were written back")
+	}
+}
+
+func TestImportRejectsInvalidPoolsWithoutReplacingTheFile(t *testing.T) {
+	dir := t.TempDir()
+	dst := filepath.Join(dir, FileName)
+	if err := os.WriteFile(dst, []byte("keep-me"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	bad := filepath.Join(dir, "bad.json")
+	if err := os.WriteFile(bad, []byte(`{"schemaVersion":1,"fetchedAt":"2026-11-02T13:00:00Z","included":{"usedPercent":1},"includedPools":{"cursorModels":{"usedPercent":140}}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Import(dst, bad); !errors.Is(err, ErrPercent) {
+		t.Fatalf("bad import err = %v", err)
+	}
+	again, err := os.ReadFile(dst)
+	if err != nil || string(again) != "keep-me" {
+		t.Fatal("failed pool import replaced the snapshot")
+	}
+}
+
+func mustMarshal(t *testing.T, snap Snapshot) []byte {
+	t.Helper()
+	body, err := Marshal(snap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return body
+}
+
 func TestUsagePathUsesQuosparrDir(t *testing.T) {
 	got := UsagePath(filepath.Join(string(os.PathSeparator), "home", "ada"))
 	want := filepath.Join(string(os.PathSeparator), "home", "ada", ".quosparr", FileName)
@@ -184,6 +285,10 @@ func TestMinSnapshotHasNoPace(t *testing.T) {
 	snap, err := Parse(data)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if !snap.HasModelPools() || snap.IncludedPools.CursorModels.Label != "" || snap.IncludedPools.CursorModels.Note != "" ||
+		snap.IncludedPools.CursorModels.UsedPercent != 42.5 || snap.IncludedPools.OtherModels.UsedPercent != 0 || snap.GrokBotWeeklyRef {
+		t.Fatalf("minimum pools = %+v weekly %v", snap.IncludedPools, snap.GrokBotWeeklyRef)
 	}
 	if BurnOf(snap).Mode != BurnNone {
 		t.Fatal("minimum snapshot invented a burn rate")

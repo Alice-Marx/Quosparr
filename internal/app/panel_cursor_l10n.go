@@ -55,19 +55,51 @@ func init() {
 	extraTexts[xCursorPaceTitle] = [7]string{
 		"Usage pace", "用量推算", "用量推算", "사용량 추정", "使用量の見積もり", "Оценка использования", "Projection d’usage",
 	}
+	extraTexts[xCursorModelsLabel] = [7]string{
+		"Cursor Models", "Cursor 模型", "Cursor 模型", "Cursor 모델", "Cursor モデル", "Модели Cursor", "Modèles Cursor",
+	}
+	extraTexts[xCursorOtherModelsLabel] = [7]string{
+		"Other Models", "其他模型", "其他模型", "기타 모델", "その他のモデル", "Другие модели", "Autres modèles",
+	}
+	extraTexts[xCursorModelsNote] = [7]string{
+		"Includes Cursor Grok and Composer",
+		"包含 Cursor Grok 与 Composer",
+		"包含 Cursor Grok 與 Composer",
+		"Cursor Grok 및 Composer 포함",
+		"Cursor Grok と Composer を含みます",
+		"Включает Cursor Grok и Composer",
+		"Comprend Cursor Grok et Composer",
+	}
+	extraTexts[xCursorIncludedInPro] = [7]string{
+		"Included in Pro", "Pro 包含额度", "Pro 包含額度", "Pro에 포함", "Pro に含まれる", "Включено в Pro", "Inclus dans Pro",
+	}
+	extraTexts[xCursorWeeklyRef] = [7]string{
+		"Weekly assistant quota is on the Grok Bot panel, in grokbot-usage.json.",
+		"每周额度在 Grok Bot 助手面板，文件为 grokbot-usage.json。",
+		"每週額度在 Grok Bot 助手面板，檔案為 grokbot-usage.json。",
+		"주간 할당량은 Grok Bot 도우미 패널의 grokbot-usage.json에 있습니다.",
+		"週次クォータは Grok Bot アシスタントのパネル、grokbot-usage.json にあります。",
+		"Недельная квота — на панели помощника Grok Bot, в grokbot-usage.json.",
+		"Le quota hebdomadaire est dans le panneau de l’assistant Grok Bot, fichier grokbot-usage.json.",
+	}
 }
 
 const (
-	xCursorTab           textKey = "cursorTab"
-	xCursorTitle         textKey = "cursorTitle"
-	xCursorLocal         textKey = "cursorLocal"
-	xCursorEmptyTitle    textKey = "cursorEmptyTitle"
-	xCursorEmptyDetail   textKey = "cursorEmptyDetail"
-	xCursorImport        textKey = "cursorImport"
-	xCursorSourceNote    textKey = "cursorSourceNote"
-	xCursorOnDemandUsed  textKey = "cursorOnDemandUsed"
-	xCursorOnDemandCap   textKey = "cursorOnDemandCap"
-	xCursorOnDemandRange textKey = "cursorOnDemandRange"
-	xCursorPeriodMonth   textKey = "cursorPeriodMonth"
-	xCursorPaceTitle     textKey = "cursorPaceTitle"
+	xCursorTab              textKey = "cursorTab"
+	xCursorTitle            textKey = "cursorTitle"
+	xCursorLocal            textKey = "cursorLocal"
+	xCursorEmptyTitle       textKey = "cursorEmptyTitle"
+	xCursorEmptyDetail      textKey = "cursorEmptyDetail"
+	xCursorImport           textKey = "cursorImport"
+	xCursorSourceNote       textKey = "cursorSourceNote"
+	xCursorOnDemandUsed     textKey = "cursorOnDemandUsed"
+	xCursorOnDemandCap      textKey = "cursorOnDemandCap"
+	xCursorOnDemandRange    textKey = "cursorOnDemandRange"
+	xCursorPeriodMonth      textKey = "cursorPeriodMonth"
+	xCursorPaceTitle        textKey = "cursorPaceTitle"
+	xCursorModelsLabel      textKey = "cursorModelsLabel"
+	xCursorOtherModelsLabel textKey = "cursorOtherModelsLabel"
+	xCursorModelsNote       textKey = "cursorModelsNote"
+	xCursorIncludedInPro    textKey = "cursorIncludedInPro"
+	xCursorWeeklyRef        textKey = "cursorWeeklyRef"
 )

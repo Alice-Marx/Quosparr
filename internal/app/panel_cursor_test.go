@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/licoy/quosparr/internal/cursorusage"
 	"github.com/licoy/quosparr/internal/l10n"
@@ -50,10 +51,13 @@ func TestCursorPanelIsSeparateFromGrokBotAndGrokCLI(t *testing.T) {
 	a.cursor.path = filepath.Join(t.TempDir(), cursorusage.FileName)
 	a.cursor.mu.Unlock()
 	tt.Frame()
-	for _, want := range []string{"Cursor Pro", "42.5", "Cloud Agents", "60", tx(l, xGrokBotOnDemandUnlimited), tx(l, xCursorTitle), tx(l, xGrokBotBurnTitle), tx(l, xCursorPaceTitle)} {
+	for _, want := range []string{"Cursor Pro", "42.5", "Cursor Models", "Other Models", "Includes Cursor Grok and Composer", "Cloud Agents", "60", tx(l, xGrokBotOnDemandUnlimited), tx(l, xCursorTitle), tx(l, xGrokBotBurnTitle), tx(l, xCursorPaceTitle), tx(l, xCursorIncludedInPro), tx(l, xCursorWeeklyRef)} {
 		if !tt.HasText(want) {
 			t.Fatalf("missing %q in %q", want, tt.Texts())
 		}
+	}
+	if tt.HasText(tx(l, xGrokBotUsed, "42.5")) || tt.HasText(tx(l, xCursorModelsLabel)) {
+		t.Fatalf("pools fell back to the overall bar or a default label: %q", tt.Texts())
 	}
 	if hasExact(tt, tx(l, xGrokBotTitle)) || hasExact(tt, l.Text(l10n.KeyGrokIncludedQuota)) || tt.HasText(tx(l, xGrokBotRepairTitle)) {
 		t.Fatal("cursor reading used a Grok Bot or Grok CLI section")
@@ -90,5 +94,62 @@ func TestCursorRefreshReadsTheSnapshotFile(t *testing.T) {
 	}
 	if strings.Contains(string(written), "DROP-ME-EXTRA") || strings.Contains(string(written), "secret") {
 		t.Fatal("import kept an unknown field")
+	}
+}
+
+func TestCursorPoolRowsUseDefaultsAndLegacyOverallStays(t *testing.T) {
+	l := l10n.New(l10n.SimplifiedChinese)
+	a, tt := newPanel(t, func(p *store.Preferences) {
+		p.Language = store.LanguageSimplifiedChinese
+		p.SelectedProvider = store.ProviderCursor
+	}, panelFixture(), PanelActions{})
+	a.cursor.mu.Lock()
+	a.cursor.path = filepath.Join(t.TempDir(), cursorusage.FileName)
+	a.cursor.missing = false
+	a.cursor.err = nil
+	a.cursor.snap = cursorusage.Snapshot{
+		SchemaVersion: 1,
+		Plan:          "Pro",
+		FetchedAt:     time.Date(2026, 11, 2, 14, 0, 0, 0, time.FixedZone("CST", 8*3600)),
+		Included: cursorusage.Included{
+			UsedPercent: 14,
+			PeriodLabel: "Included in Pro",
+		},
+		IncludedPools: cursorusage.IncludedPools{
+			CursorModels: cursorusage.Pool{Present: true, UsedPercent: 14},
+			OtherModels:  cursorusage.Pool{Present: true, UsedPercent: 0},
+		},
+		GrokBotWeeklyRef: true,
+	}
+	a.cursor.mu.Unlock()
+	tt.Frame()
+	for _, want := range []string{tx(l, xCursorModelsLabel), tx(l, xCursorOtherModelsLabel), tx(l, xCursorModelsNote), tx(l, xCursorIncludedInPro), tx(l, xCursorWeeklyRef), "14%", "0%"} {
+		if !hasExact(tt, want) && !tt.HasText(want) {
+			t.Fatalf("missing %q in %q", want, tt.Texts())
+		}
+	}
+	if tt.HasText("Cursor Models") || tt.HasText("Other Models") || tt.HasText(tx(l, xGrokBotUsed, "14")) {
+		t.Fatalf("defaults were replaced by English labels or the overall bar: %q", tt.Texts())
+	}
+
+	a.cursor.mu.Lock()
+	a.cursor.snap.IncludedPools.CursorModels.Present = false
+	a.cursor.mu.Unlock()
+	tt.Frame()
+	if !hasExact(tt, tx(l, xCursorOtherModelsLabel)) || tt.HasText(tx(l, xCursorModelsLabel)) || tt.HasText(tx(l, xCursorModelsNote)) || tt.HasText(tx(l, xGrokBotUsed, "14")) {
+		t.Fatalf("one pool did not stay a dedicated row: %q", tt.Texts())
+	}
+
+	a.cursor.mu.Lock()
+	a.cursor.snap.IncludedPools = cursorusage.IncludedPools{}
+	a.cursor.snap.GrokBotWeeklyRef = false
+	a.cursor.snap.Included.PeriodLabel = "this_week"
+	a.cursor.mu.Unlock()
+	tt.Frame()
+	if !tt.HasText(tx(l, xGrokBotUsed, "14")) || !tt.HasText(tx(l, xGrokBotPeriodWeek)) {
+		t.Fatalf("legacy reading missing: %q", tt.Texts())
+	}
+	if tt.HasText(tx(l, xCursorModelsLabel)) || tt.HasText(tx(l, xCursorOtherModelsLabel)) || tt.HasText(tx(l, xCursorWeeklyRef)) {
+		t.Fatalf("legacy reading invented pools: %q", tt.Texts())
 	}
 }
