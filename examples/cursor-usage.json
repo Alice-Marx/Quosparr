@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "fetchedAt": "2026-11-02T13:00:00+08:00",
+  "plan": "Cursor Pro",
+  "periodStart": "2026-10-30T17:57:00+08:00",
+  "included": {
+    "usedPercent": 42.5,
+    "resetAt": "2026-11-06T17:57:00+08:00",
+    "periodLabel": "this_week"
+  },
+  "onDemand": {
+    "status": "unlimited",
+    "usedUsd": null,
+    "limitUsd": null
+  },
+  "breakdown": [
+    { "name": "Cloud Agents", "sharePercent": 60 },
+    { "name": "Tab / Inline", "sharePercent": 25 },
+    { "name": "Chat", "sharePercent": 15 }
+  ],
+  "history": [
+    { "at": "2026-10-31T13:00:00+08:00", "usedPercent": 20 },
+    { "at": "2026-11-02T13:00:00+08:00", "usedPercent": 42.5 }
+  ],
+  "notes": "Manual or routine snapshot; not an official public API. Grok Bot assistant usage is a separate file."
+}

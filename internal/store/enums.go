@@ -16,6 +16,9 @@ const (
 	// ProviderGrokBot is the Grok Bot assistant quota tab. It is not a CLI
 	// provider: Providers, account lists, MCP, skills and sessions ignore it.
 	ProviderGrokBot Provider = "grokbot"
+	// ProviderCursor is the Cursor product usage tab. It is not a CLI
+	// provider and it is not the Grok Bot assistant snapshot.
+	ProviderCursor Provider = "cursor"
 )
 
 // Providers returns every CLI provider, in display order.
@@ -24,9 +27,11 @@ func Providers() []Provider { return []Provider{ProviderCodex, ProviderClaude, P
 // Valid reports whether v is a CLI provider stored in provider lists.
 func (v Provider) Valid() bool { return slices.Contains(Providers(), v) }
 
-// PanelSelectable reports whether the main panel can show v. Grok Bot is
-// included; it is not a member of Providers.
-func (v Provider) PanelSelectable() bool { return v.Valid() || v == ProviderGrokBot }
+// PanelSelectable reports whether the main panel can show v. Grok Bot and
+// Cursor are included; neither is a member of Providers.
+func (v Provider) PanelSelectable() bool {
+	return v.Valid() || v == ProviderGrokBot || v == ProviderCursor
+}
 
 // Language is the user's language preference.
 type Language string

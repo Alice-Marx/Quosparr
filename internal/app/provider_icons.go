@@ -44,6 +44,8 @@ func ProviderIcon(c *ui.Context, provider store.Provider, size float32) ui.Eleme
 		return ui.Image(c, claudeProviderIcon).Size(size, size)
 	case store.ProviderGrokBot:
 		return ui.Icon(c, icChat).Size(size, size)
+	case store.ProviderCursor:
+		return ui.Icon(c, icGauge).Size(size, size)
 	default:
 		return ui.Icon(c, icPlug).Size(size, size).TextColor(c.Theme().TextMuted)
 	}

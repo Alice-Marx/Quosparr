@@ -264,7 +264,8 @@ func checkEnum[T ~string](t *testing.T, key string, values []T, valid func(T) bo
 	}
 	// A name this version does not know, such as one a newer build wrote, is
 	// the default and saves back as it.
-	for _, unknown := range []string{`"klingon"`, `""`, `"Codex"`, `"cursor"`} {
+	// "cursor" is a real panel provider, so it cannot stand in for an unknown name.
+	for _, unknown := range []string{`"klingon"`, `""`, `"Codex"`, `"windsurf"`} {
 		p := mustDecode(t, `{"`+key+`":`+unknown+`}`)
 		if get(p) != get(DefaultPreferences()) {
 			t.Errorf("%s=%s: decoded %q, want the default", key, unknown, get(p))
@@ -802,6 +803,30 @@ func TestGrokBotSelectionStaysOutOfCLILists(t *testing.T) {
 	}
 	back := mustDecode(t, string(enc))
 	if back.SelectedProvider != ProviderGrokBot {
+		t.Fatalf("round trip selected %s", back.SelectedProvider)
+	}
+}
+
+func TestCursorSelectionStaysOutOfCLILists(t *testing.T) {
+	if ProviderCursor.Valid() || !ProviderCursor.PanelSelectable() {
+		t.Fatal("cursor must be a panel tab without joining the CLI provider list")
+	}
+	p := mustDecode(t, `{"selectedProvider":"cursor","panelProviders":["codex","cursor"]}`)
+	if p.SelectedProvider != ProviderCursor {
+		t.Fatalf("selected = %s", p.SelectedProvider)
+	}
+	if !slices.Equal(p.PanelProviders, []Provider{ProviderCodex}) || slices.Contains(p.PanelSelection(), ProviderCursor) {
+		t.Fatalf("panel list = %v selection %v", p.PanelProviders, p.PanelSelection())
+	}
+	enc, err := EncodePreferences(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(enc), `"selectedProvider":"cursor"`) {
+		t.Fatalf("encoded %s", enc)
+	}
+	back := mustDecode(t, string(enc))
+	if back.SelectedProvider != ProviderCursor {
 		t.Fatalf("round trip selected %s", back.SelectedProvider)
 	}
 }

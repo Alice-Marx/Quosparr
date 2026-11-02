@@ -423,7 +423,7 @@ func (s *Service) refreshPanelLocal() {
 		s.refreshGrokLocal()
 	case store.ProviderClaude:
 		s.refreshClaudeLocal()
-	case store.ProviderGrokBot:
+	case store.ProviderGrokBot, store.ProviderCursor:
 		return
 	default:
 		if p.ShowsSessionRepairSummary {
