@@ -782,6 +782,30 @@ func TestPanelSelectionKeepsSelectedProviderShown(t *testing.T) {
 	}
 }
 
+func TestGrokBotSelectionStaysOutOfCLILists(t *testing.T) {
+	if ProviderGrokBot.Valid() || !ProviderGrokBot.PanelSelectable() {
+		t.Fatal("grokbot must be a panel tab without joining the CLI provider list")
+	}
+	p := mustDecode(t, `{"selectedProvider":"grokbot","panelProviders":["codex","grokbot"]}`)
+	if p.SelectedProvider != ProviderGrokBot {
+		t.Fatalf("selected = %s", p.SelectedProvider)
+	}
+	if !slices.Equal(p.PanelProviders, []Provider{ProviderCodex}) || slices.Contains(p.PanelSelection(), ProviderGrokBot) {
+		t.Fatalf("panel list = %v selection %v", p.PanelProviders, p.PanelSelection())
+	}
+	enc, err := EncodePreferences(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(enc), `"selectedProvider":"grokbot"`) {
+		t.Fatalf("encoded %s", enc)
+	}
+	back := mustDecode(t, string(enc))
+	if back.SelectedProvider != ProviderGrokBot {
+		t.Fatalf("round trip selected %s", back.SelectedProvider)
+	}
+}
+
 func TestFontFamilyIsGoOnlyAndLenient(t *testing.T) {
 	enc, err := EncodePreferences(DefaultPreferences())
 	if err != nil {

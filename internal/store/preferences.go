@@ -280,9 +280,12 @@ func (p *Preferences) normalizePanelProviders() {
 		p.PanelProviders = nil
 		return
 	}
-	if !slices.Contains(p.PanelProviders, p.SelectedProvider) {
-		p.SelectedProvider = p.PanelProviders[0]
+	// Grok Bot is always offered beside the CLI tabs, so a custom CLI list
+	// does not move the selection off it.
+	if p.SelectedProvider == ProviderGrokBot || slices.Contains(p.PanelProviders, p.SelectedProvider) {
+		return
 	}
+	p.SelectedProvider = p.PanelProviders[0]
 }
 
 // normalizeStatusBarProviders applies the custom-list rules. Legacy both is

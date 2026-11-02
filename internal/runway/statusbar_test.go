@@ -218,3 +218,25 @@ func TestShortestWindowMeterPrefersShortestStandardWindow(t *testing.T) {
 		t.Error("empty meters picked a meter")
 	}
 }
+
+func TestStatusBarGrokBotDoesNotReuseCodexMeters(t *testing.T) {
+	codex := testMeter("5h", 80, FiveHourMinutes, SourceStandard)
+	week := testMeter("week", 7, WeeklyMinutes, SourceStandard)
+	p := store.DefaultPreferences()
+	p.SelectedProvider = store.ProviderGrokBot
+	v := BuildStatusBar(zh, StatusInputs{Prefs: p, Provider: store.ProviderGrokBot, CodexMeters: []Meter{codex}, GrokBotMeters: []Meter{week}, Now: time.Now()})
+	if len(v.Components) != 1 || v.Components[0].Provider != store.ProviderGrokBot {
+		t.Fatalf("components = %+v", v.Components)
+	}
+	cell := v.Components[0].Cells[0]
+	if cell.Provider != store.ProviderGrokBot || cell.Empty || cell.Remaining != week.RemainingPercent || strings.Contains(v.Tooltip, "Codex") {
+		t.Fatalf("cell = %+v tip %q", cell, v.Tooltip)
+	}
+	if !strings.Contains(v.Tooltip, "Grok Bot") {
+		t.Fatalf("tip = %q", v.Tooltip)
+	}
+	empty := BuildStatusBar(zh, StatusInputs{Prefs: p, Provider: store.ProviderGrokBot, CodexMeters: []Meter{codex}, Now: time.Now()})
+	if c := empty.Components[0].Cells[0]; !c.Empty || c.Provider != store.ProviderGrokBot {
+		t.Fatalf("empty grok bot reused codex: %+v", c)
+	}
+}

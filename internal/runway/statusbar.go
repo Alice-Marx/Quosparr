@@ -11,9 +11,10 @@ import (
 
 // Preferred window lengths of a provider's main window.
 var (
-	codexPreferredWindows  = []int{FiveHourMinutes, WeeklyMinutes}
-	grokPreferredWindows   = []int{WeeklyMinutes, MonthlyMinutes}
-	claudePreferredWindows = []int{FiveHourMinutes, WeeklyMinutes}
+	codexPreferredWindows   = []int{FiveHourMinutes, WeeklyMinutes}
+	grokPreferredWindows    = []int{WeeklyMinutes, MonthlyMinutes}
+	claudePreferredWindows  = []int{FiveHourMinutes, WeeklyMinutes}
+	grokBotPreferredWindows = []int{WeeklyMinutes}
 )
 
 // PrimaryStandardMeter picks the first standard meter matching a preferred
@@ -80,7 +81,10 @@ type StatusInputs struct {
 	Grok GrokState
 	// Claude side. The preferred status window is 5 hours, then 7 days.
 	Claude ClaudeState
-	Now    time.Time
+	// GrokBotMeters is the assistant weekly quota. It is empty until the
+	// panel has a snapshot; Codex meters are never reused for it.
+	GrokBotMeters []Meter
+	Now           time.Time
 }
 
 // GrokStatusText is the status text of Grok: the countdown of the first
@@ -110,6 +114,8 @@ func statusTextFor(lc l10n.Localizer, in StatusInputs, p store.Provider) string 
 		return GrokStatusText(lc, in.Grok, in.Now)
 	case store.ProviderClaude:
 		return ClaudeStatusText(lc, in.Claude, in.Now)
+	case store.ProviderGrokBot:
+		return lc.Text(l10n.KeyStatusUnknown)
 	default:
 		return in.CodexText
 	}
@@ -148,6 +154,8 @@ func metersOf(in StatusInputs, p store.Provider) []Meter {
 		return in.Grok.Meters
 	case store.ProviderClaude:
 		return in.Claude.Meters
+	case store.ProviderGrokBot:
+		return in.GrokBotMeters
 	default:
 		return in.CodexMeters
 	}
@@ -159,9 +167,18 @@ func preferredOf(p store.Provider) []int {
 		return grokPreferredWindows
 	case store.ProviderClaude:
 		return claudePreferredWindows
+	case store.ProviderGrokBot:
+		return grokBotPreferredWindows
 	default:
 		return codexPreferredWindows
 	}
+}
+
+func statusProviderName(lc l10n.Localizer, p store.Provider) string {
+	if p == store.ProviderGrokBot {
+		return "Grok Bot"
+	}
+	return lc.Text(providerStatusKey(p))
 }
 
 func providerStatusKey(p store.Provider) l10n.Key {
@@ -245,7 +262,7 @@ func statusGroups(in StatusInputs) [][]store.Provider {
 	groups := in.Prefs.StatusBarGroups()
 	if groups == nil {
 		p := in.Provider
-		if !p.Valid() {
+		if p != store.ProviderGrokBot && !p.Valid() {
 			p = store.ProviderCodex
 		}
 		return [][]store.Provider{{p}}
@@ -307,7 +324,7 @@ func statusCells(lc l10n.Localizer, in StatusInputs, p store.Provider, picked []
 // statusTip is the provider's tooltip line: every window shown, with the
 // time left, or why there is none.
 func statusTip(lc l10n.Localizer, in StatusInputs, p store.Provider, picked []Meter) string {
-	name := lc.Text(providerStatusKey(p))
+	name := statusProviderName(lc, p)
 	if len(picked) == 0 {
 		return name + ": " + floatingStatus(lc, in, p)
 	}

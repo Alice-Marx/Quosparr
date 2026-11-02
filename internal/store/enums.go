@@ -13,13 +13,20 @@ const (
 	ProviderCodex  Provider = "codex"
 	ProviderClaude Provider = "claude"
 	ProviderGrok   Provider = "grok"
+	// ProviderGrokBot is the Grok Bot assistant quota tab. It is not a CLI
+	// provider: Providers, account lists, MCP, skills and sessions ignore it.
+	ProviderGrokBot Provider = "grokbot"
 )
 
-// Providers returns every valid Provider, in display order.
+// Providers returns every CLI provider, in display order.
 func Providers() []Provider { return []Provider{ProviderCodex, ProviderClaude, ProviderGrok} }
 
-// Valid reports whether v is a known value.
+// Valid reports whether v is a CLI provider stored in provider lists.
 func (v Provider) Valid() bool { return slices.Contains(Providers(), v) }
+
+// PanelSelectable reports whether the main panel can show v. Grok Bot is
+// included; it is not a member of Providers.
+func (v Provider) PanelSelectable() bool { return v.Valid() || v == ProviderGrokBot }
 
 // Language is the user's language preference.
 type Language string

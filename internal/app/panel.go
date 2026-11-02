@@ -78,7 +78,7 @@ func (a *App) panelMainPage(c *ui.Context, l l10n.Localizer, prefs store.Prefere
 	ui.Scroll(c.Key("panel-main-scroll")).Grow(1).TrackScroll(&a.panelState.mainScroll).Children(func() {
 		ui.Column(c).Padding(4, 16).Children(func() {
 			panelStartup(c, a, l)
-			panelBody(c, l, prefs, snap, acts, &a.panelState)
+			panelBody(c, a, l, prefs, snap, acts, &a.panelState)
 		})
 	})
 	panelStatusLines(c, l, prefs, snap)
@@ -91,6 +91,8 @@ func (a *App) panelMainPage(c *ui.Context, l l10n.Localizer, prefs store.Prefere
 func panelStatusLines(c *ui.Context, l l10n.Localizer, prefs store.Preferences, snap runway.Snapshot) {
 	message, failure := snap.Accounts.Message, snap.Codex.LastError
 	switch prefs.SelectedProvider {
+	case store.ProviderGrokBot:
+		return
 	case store.ProviderGrok:
 		message, failure = snap.Grok.Accounts.Message, snap.Grok.LastError
 	case store.ProviderClaude:

@@ -14,6 +14,8 @@ Quosparr est une application native de barre de menus / zone de notification pou
 
 </div>
 
+> Ce dépôt est le [fork d’Alice-Marx](https://github.com/Alice-Marx/Quosparr) de [Licoy/Quosparr](https://github.com/Licoy/Quosparr), sous la licence GNU Affero General Public License v3.0 ([LICENSE](LICENSE)). Le changement d’Alice est un panneau distinct de quota hebdomadaire pour **l’assistant Grok Bot**. L’assistant Grok Bot **n’a pas d’API de facturation tierce publique**. Le panneau ne lit qu’un instantané JSON local. Il ne récupère ni cookies, ni pages de réglages Grok Bot, ni tableaux de bord Cursor, et ce fork ne fournit pas de routine qui écrit l’instantané.
+
 ## Points forts
 
 **Codex**
@@ -42,6 +44,13 @@ Quosparr est une application native de barre de menus / zone de notification pou
 - Quota inclus, répartition Build / Imagine / Chat, périodes hebdomadaires / mensuelles, solde prépayé et usage à la demande via l’API de facturation officielle CLI chat-proxy.
 - Plusieurs comptes OAuth / SuperGrok avec connexion isolée, import de la connexion actuelle, collage d’identifiants, actualisation, alias, ordre et basculement explicite.
 - Sessions récentes issues des journaux locaux du CLI Grok.
+
+**Assistant Grok Bot**
+
+- Un onglet de panneau nommé **Grok Bot** (简体中文 : **Grok Bot 助手**), toujours affiché et distinct de l’onglet CLI **Grok**. Ce n’est pas une vue de compte, de session ou de facturation du CLI Grok.
+- Affiche le pourcentage utilisé, l’heure de réinitialisation et un résumé à la demande. Si l’instantané contient une répartition, les bots et activités les plus importants sont affichés.
+- L’actualisation surveille l’heure de modification du fichier d’instantané, et l’actualisation de l’en-tête ne relit que ce fichier. L’état vide explique le chemin d’import.
+- **Importer JSON** copie le fichier choisi vers le chemin de l’instantané après validation. Les champs inconnus, y compris les jetons, sont écartés. Il n’y a pas d’écrivain intégré. Copiez [`examples/grokbot-usage.json`](examples/grokbot-usage.json), ou remplacez le fichier vous-même. Une routine ultérieure doit écrire un fichier temporaire dans le même répertoire, puis le renommer.
 
 **Tous les fournisseurs**
 
@@ -132,6 +141,7 @@ Linux nécessite GTK3, AppIndicator, un bureau prenant en charge la zone de noti
   ```
 
 - Les comptes et le quota Grok ne prennent en charge que OAuth / SuperGrok et les sessions legacy compatibles. Exécutez `grok login --oauth`, connectez-vous depuis l’app, importez la connexion actuelle ou collez un JSON d’identifiants. Les connexions par clé API seule ne sont pas ajoutées comme comptes gérés. `GROK_HOME` est utilisé s’il est défini, sinon `~/.grok`.
+- Le panneau de l’assistant Grok Bot n’a pas besoin du CLI Grok. Il ne lit que `~/.quosparr/grokbot-usage.json` (`%USERPROFILE%\.quosparr\grokbot-usage.json` sous Windows). Copiez-y [`examples/grokbot-usage.json`](examples/grokbot-usage.json), ou utilisez **Importer JSON** sur ce panneau.
 
 ## Widgets bureau
 
@@ -158,6 +168,7 @@ Les changements ne s’appliquent qu’après **Enregistrer le proxy**. **Tester
 - L’ajout d’un skill liste d’abord les fichiers de la source et ne lit en mémoire que les dossiers des skills avant d’écrire quoi que ce soit : un gros dépôt coûte du temps de téléchargement, pas de la mémoire ; leurs scripts ne sont jamais exécutés ; les sources GitHub ne contactent que GitHub en HTTPS, selon les réglages de proxy. L’origine de chaque skill ajouté (dépôt, ref, commit, dossier dans le dépôt ou chemin local) est conservée dans `~/.quosparr/skill-sources.json` (`0600`), sans aucun secret.
 - Le coût équivalent API est calculé à partir des journaux de session locaux. Le contenu des sessions n’est pas téléversé.
 - Les jetons et les clés API ne sont jamais écrits dans les journaux, la sortie d’auto-diagnostic ou les modèles d’issue.
+- L’instantané de l’assistant Grok Bot ne contient que des statistiques d’usage non secrètes. Les jetons, cookies et clés API d’un document importé sont écartés et ne sont pas écrits dans les journaux.
 - Les Actualités des réinitialisations Codex et la recherche de mises à jour ne récupèrent que des données publiques ; aucun compte, jeton ni contenu de session n’est envoyé.
 
 ## Sources de données
@@ -168,6 +179,7 @@ Les changements ne s’appliquent qu’après **Enregistrer le proxy**. **Tester
 - **Usage d’abonnement Claude Code** : un point d’accès OAuth usage non documenté. Il ne concerne que l’abonnement Claude Code actuel et n’est pas présenté comme une API de facturation officielle. Ni cookies du navigateur ni facture API de la Console ; les profils Desktop sont gérés uniquement par la fonction distincte et explicitement confirmée décrite ci-dessus.
 - **Coût équivalent API Claude** : journaux de session locaux de Claude Code et table `anthropic-builtin-2026-10-14`. Une réponse n’est comptée qu’une fois, par identifiant de message. Les écritures de cache sont séparées en 5 minutes et 1 heure, et le tarif Fast est distinct. Les modèles inconnus n’ont pas de coût exact. Les jours suivent le fuseau local.
 - **Quota Grok** : uniquement le point d’accès officiel CLI chat-proxy `/v1/billing?format=credits`. Ni cookies du navigateur, ni quota déduit des journaux locaux, ni facturation API mélangée.
+- **Quota hebdomadaire de l’assistant Grok Bot** : instantané JSON local uniquement, schéma version 1, à `~/.quosparr/grokbot-usage.json` (`%USERPROFILE%\.quosparr\grokbot-usage.json` sous Windows). Il n’existe pas d’API de facturation tierce publique. L’exemple et les champs sont dans [`examples/grokbot-usage.json`](examples/grokbot-usage.json) : `schemaVersion`, `fetchedAt`, `plan`, `usedPercent`, `resetAt`, `onDemand.status`, `periodLabel`, `breakdown[].bot`, `breakdown[].sharePercent`, `breakdown[].activities[].name`, `breakdown[].activities[].sharePercent` et `notes`. `schemaVersion` doit valoir `1`. `usedPercent` va de 0 à 100. Les heures sont en RFC3339. Le fichier contient des statistiques d’usage non secrètes, en mode `0600`. Importez-le depuis le panneau, ou copiez l’exemple à ce chemin. Remplacez le fichier de façon atomique : écrivez un fichier temporaire dans le même répertoire, puis renommez-le. Cette application ne lit ni cookies, ni pages de réglages Grok Bot, ni tableaux de bord Cursor.
 - **Coût équivalent API Grok** : usage local `turn_completed` valorisé avec `xai-builtin-2026-09-27`, couvrant les tarifs d’entrée, de cache, de sortie et de long contexte. `costUsdTicks` relève de la comptabilité d’abonnement et n’est pas utilisé comme coût équivalent API.
 - **Actualités des réinitialisations Codex** : le flux public [didcodexreset.com/api/status.json](https://didcodexreset.com/api/status.json). Non officiel, indicatif seulement et parfois en retard.
 - Dans le graphique, « Stats officielles (tous les appareils) » appartient au compte actuel, tandis que « Journaux locaux (toutes les sessions) » analyse cette machine et peut couvrir plusieurs comptes. L’une n’est pas un sous-ensemble de l’autre et elles ne doivent pas être soustraites ; les valeurs quotidiennes Codex des deux utilisent des jours UTC.
@@ -198,6 +210,12 @@ Construisez un paquet de développement macOS (mise à jour désactivée ; `ARCH
 V1_DEVELOPMENT_PACKAGE=1 bash Scripts/package-v1-app.sh
 ```
 
+Construisez un paquet de développement Windows amd64 sur une machine avec Go, Python 3 et NSIS `makensis` (mise à jour désactivée). Le répertoire de sortie est `build/v1-windows-amd64/windows-amd64/`, avec `Quosparr Setup <version> amd64.exe` :
+
+```bash
+V1_DEVELOPMENT_PACKAGE=1 bash Scripts/package-v1-platform.sh windows/amd64
+```
+
 Voir [docs/v1-release.md](docs/v1-release.md) pour le paquetage Windows / Linux et les vérifications de publication, et [CONTRIBUTORS.md](CONTRIBUTORS.md) pour les notes de contribution.
 
 ## Communauté
@@ -206,4 +224,4 @@ Voir [docs/v1-release.md](docs/v1-release.md) pour le paquetage Windows / Linux 
 
 ## Licence
 
-Ce projet suit le [LICENSE](LICENSE) du dépôt.
+Ce fork est publié sous la GNU Affero General Public License v3.0 ([LICENSE](LICENSE)). C’est un fork de [Licoy/Quosparr](https://github.com/Licoy/Quosparr).

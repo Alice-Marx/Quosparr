@@ -14,6 +14,8 @@ Quosparr は macOS、Windows、Linux 向けのネイティブなメニューバ�
 
 </div>
 
+> このリポジトリは [Licoy/Quosparr](https://github.com/Licoy/Quosparr) の [Alice-Marx によるフォーク](https://github.com/Alice-Marx/Quosparr) で、GNU Affero General Public License v3.0（[LICENSE](LICENSE)）に従います。Alice が加えた変更は、独立した **Grok Bot アシスタント**の週次クォータパネルです。Grok Bot アシスタントには**公開されたサードパーティ課金 API がありません**。パネルはローカル JSON スナップショットだけを読みます。Cookie、Grok Bot の設定ページ、Cursor ダッシュボードは取得せず、このフォークにはスナップショットを書くルーチンも含まれません。
+
 ## ハイライト
 
 **Codex**
@@ -42,6 +44,13 @@ Quosparr は macOS、Windows、Linux 向けのネイティブなメニューバ�
 - 公式 CLI の chat-proxy 課金 API から、含まれるクォータ、Build / Imagine / Chat の内訳、週 / 月の周期、プリペイド残高、オンデマンド使用量を表示します。
 - 複数の OAuth / SuperGrok アカウントに対応し、隔離されたサインイン、現在のログインの取り込み、資格情報の貼り付け、更新、エイリアス、並べ替え、明示的な切り替えができます。
 - ローカルの Grok CLI ログから最近のセッションを表示します。
+
+**Grok Bot アシスタント**
+
+- パネルのタブは **Grok Bot**（简体中文: **Grok Bot 助手**）で、常に表示され、**Grok** CLI のタブとは別です。Grok CLI のアカウント、セッション、課金画面ではありません。
+- 使用率、リセット時刻、オンデマンドの要約を表示します。スナップショットに内訳があれば、割合の高いボットとアクティビティを表示します。
+- 更新はスナップショットファイルの更新時刻を監視し、ヘッダーの更新もそのファイルだけを読み直します。スナップショットが無いときは、空の状態が取り込みパスを説明します。
+- **JSON を取り込む**は、選んだファイルを検証してからスナップショットのパスへコピーします。トークンを含む未知のフィールドは捨てられます。組み込みの書き込み処理はありません。[`examples/grokbot-usage.json`](examples/grokbot-usage.json) をコピーするか、自分でファイルを置き換えてください。後から加えるルーチンは、同じディレクトリに一時ファイルを書いてから名前を変更して置き換えてください。
 
 **3 つのプロバイダー共通**
 
@@ -132,6 +141,7 @@ Linux には GTK3、AppIndicator、トレイに対応したデスクトップ、
   ```
 
 - Grok のアカウントとクォータは、OAuth / SuperGrok と互換のレガシーセッションのみに対応します。`grok login --oauth` を実行するか、アプリ内でサインインするか、現在のログインを取り込むか、資格情報 JSON を貼り付けてください。API キーのみのログインは管理アカウントとして追加されません。`GROK_HOME` が設定されていればそれを使い、設定されていなければ `~/.grok` を使います。
+- Grok Bot アシスタントのパネルに Grok CLI は不要です。読むのは `~/.quosparr/grokbot-usage.json`（Windows では `%USERPROFILE%\.quosparr\grokbot-usage.json`）だけです。[`examples/grokbot-usage.json`](examples/grokbot-usage.json) をそのパスへコピーするか、そのパネルの **JSON を取り込む** を使ってください。
 
 ## デスクトップウィジェット
 
@@ -158,6 +168,7 @@ Linux には GTK3、AppIndicator、トレイに対応したデスクトップ、
 - skill の追加では、まず取り込み元のファイル一覧を確認し、skill のフォルダだけをメモリに読み込んでから、確認後に書き込みます。大きなリポジトリでもダウンロード時間が増えるだけでメモリは増えず、含まれるスクリプトは実行しません。GitHub からの取得はプロキシ設定に従い HTTPS で GitHub にのみ接続します。追加した skill の出どころ（リポジトリ、ref、コミット、リポジトリ内のフォルダ、またはローカルパス）は `~/.quosparr/skill-sources.json`（`0600`）に記録し、秘密情報は含みません。
 - API 換算コストはローカルのセッションログから計算されます。セッションの内容はアップロードされません。
 - token や API キーが、ログ、セルフチェックの出力、issue テンプレートに書き込まれることはありません。
+- Grok Bot アシスタントのスナップショットは、秘密ではない使用量の統計だけを持ちます。取り込んだ文書にあるトークン、Cookie、API キーは捨てられ、ログにも書かれません。
 - Codex リセット更新とアップデートの確認は公開データのみを取得し、アカウント、token、セッションの内容は送信されません。
 
 ## データソース
@@ -168,6 +179,7 @@ Linux には GTK3、AppIndicator、トレイに対応したデスクトップ、
 - **Claude Code のサブスクリプション使用量**: 文書化されていない OAuth usage エンドポイントで、現在の Claude Code サブスクリプションだけを表します。公式の課金 API とは書きません。ブラウザの Cookie や Console の API 請求は読みません、Desktop プロファイルは上記の独立した明示確認付き機能でのみ管理します。
 - **Claude の API 換算コスト**: Claude Code のローカルセッションログと価格表 `anthropic-builtin-2026-10-14` で計算します。同じ応答はメッセージ ID で一度だけ数えます。キャッシュ書き込みは 5 分と 1 時間に分け、Fast 料金は別です。未知のモデルに正確な費用は出しません。日界はローカルタイムゾーンです。
 - **Grok のクォータ**: 公式 CLI の chat-proxy `/v1/billing?format=credits` エンドポイントのみを使います。ブラウザの Cookie は使わず、ローカルログからクォータを推測せず、API 課金も混ぜません。
+- **Grok Bot アシスタントの週次クォータ**: ローカル JSON スナップショットのみ、スキーマバージョン 1、パスは `~/.quosparr/grokbot-usage.json`（Windows は `%USERPROFILE%\.quosparr\grokbot-usage.json`）。公開されたサードパーティ課金 API はありません。例とフィールドは [`examples/grokbot-usage.json`](examples/grokbot-usage.json) にあります。`schemaVersion`、`fetchedAt`、`plan`、`usedPercent`、`resetAt`、`onDemand.status`、`periodLabel`、`breakdown[].bot`、`breakdown[].sharePercent`、`breakdown[].activities[].name`、`breakdown[].activities[].sharePercent`、`notes`。`schemaVersion` は `1` でなければなりません。`usedPercent` は 0 から 100 です。時刻は RFC3339 です。ファイルは秘密ではない使用量統計で、権限は `0600` です。パネルから取り込むか、例をそのパスへコピーしてください。置き換えはアトミックに行います。同じディレクトリに一時ファイルを書いてから名前を変更します。このアプリは Cookie、Grok Bot の設定ページ、Cursor ダッシュボードを読みません。
 - **Grok の API 換算コスト**: ローカルの `turn_completed` 使用量を `xai-builtin-2026-09-27` で計算し、入力、キャッシュ、出力、長いコンテキストの料金を区別します。`costUsdTicks` はサブスクリプションの会計値であり、API 換算コストには使いません。
 - **Codex リセット更新**: 公開フィード [didcodexreset.com/api/status.json](https://didcodexreset.com/api/status.json) から取得します。非公式で参考情報にすぎず、遅れることがあります。
 - チャートの「公式統計（全デバイス）」は現在のアカウントに属し、「ローカルログ（全セッション）」はこの端末をスキャンするため、複数のアカウントにまたがることがあります。両者は一方がもう一方の部分集合というわけではなく、引き算してはいけません。どちらの Codex の日次値も UTC の日で集計されます。
@@ -198,6 +210,12 @@ macOS の開発用パッケージをビルドします（アップデーター�
 V1_DEVELOPMENT_PACKAGE=1 bash Scripts/package-v1-app.sh
 ```
 
+Go、Python 3、NSIS の `makensis` があるマシンで Windows amd64 の開発用パッケージをビルドします（アップデーターは無効）。出力ディレクトリは `build/v1-windows-amd64/windows-amd64/` で、`Quosparr Setup <version> amd64.exe` を含みます。
+
+```bash
+V1_DEVELOPMENT_PACKAGE=1 bash Scripts/package-v1-platform.sh windows/amd64
+```
+
 Windows / Linux のパッケージ化とリリース確認については [docs/v1-release.md](docs/v1-release.md)、貢献に関する注意は [CONTRIBUTORS.md](CONTRIBUTORS.md) を参照してください。
 
 ## コミュニティ
@@ -206,4 +224,4 @@ Windows / Linux のパッケージ化とリリース確認については [docs/
 
 ## ライセンス
 
-このプロジェクトはリポジトリの [LICENSE](LICENSE) に従います。
+このフォークは GNU Affero General Public License v3.0（[LICENSE](LICENSE)）に従い、[Licoy/Quosparr](https://github.com/Licoy/Quosparr) のフォークです。
