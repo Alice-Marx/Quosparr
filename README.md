@@ -14,7 +14,7 @@ Quosparr is a native menu bar / system tray app for macOS, Windows, and Linux. I
 
 </div>
 
-> This repository is [Alice-Marx's fork](https://github.com/Alice-Marx/Quosparr) of [Licoy/Quosparr](https://github.com/Licoy/Quosparr), under the GNU Affero General Public License v3.0 ([LICENSE](LICENSE)). Alice's change is a separate **Grok Bot assistant** weekly quota panel. Grok Bot assistant has **no public third-party billing API**. The panel reads a local JSON snapshot only. It does not scrape cookies, Grok Bot settings pages, or Cursor dashboards, and this fork does not ship a routine that writes the snapshot.
+> This repository is [Alice-Marx's fork](https://github.com/Alice-Marx/Quosparr) of [Licoy/Quosparr](https://github.com/Licoy/Quosparr), under the GNU Affero General Public License v3.0 ([LICENSE](LICENSE)). Alice's changes are a separate **Grok Bot assistant** weekly quota panel and a separate **Cursor** usage panel. Neither has a **public third-party billing API**. Each panel reads its own local JSON snapshot. They do not scrape cookies, Grok Bot settings pages, or Cursor dashboard HTML, and this fork does not ship a routine that writes either snapshot.
 
 ## Highlights
 
@@ -51,6 +51,13 @@ Quosparr is a native menu bar / system tray app for macOS, Windows, and Linux. I
 - Shows used percent, reset time, and an on-demand summary. When the snapshot includes a breakdown, it shows the top bots and activities.
 - Refresh watches the snapshot file's modification time, and the header refresh reloads that file. An empty snapshot explains the import path.
 - **Import JSON** copies a chosen file into the snapshot path after validation. Unknown fields, including tokens, are dropped. There is no built-in writer. Copy [`examples/grokbot-usage.json`](examples/grokbot-usage.json), or replace the file yourself. A later routine should write a temporary file in the same directory and rename it into place.
+
+**Cursor usage**
+
+- A panel tab labeled **Cursor** (简体中文: **Cursor 额度**), always shown, separate from **Grok Bot** and from the **Grok** CLI tab. It is Cursor IDE / Cloud Agents / Cursor product usage, not the Grok Bot assistant weekly quota and not the xAI Grok CLI.
+- Shows included used percent, reset time, on-demand status, and optional on-demand dollars. When the snapshot includes a breakdown, it shows the top product shares. Optional `periodStart` and `history` feed burn rate and usage pace.
+- Refresh watches the snapshot file's modification time, and the header refresh reloads that file. An empty snapshot explains the import path and that there is no official API.
+- **Import JSON** copies a chosen file into the snapshot path after validation. Unknown fields, including tokens, are dropped. There is no built-in writer. Copy [`examples/cursor-usage.json`](examples/cursor-usage.json), or replace the file yourself. A later routine should write a temporary file in the same directory and rename it into place.
 
 **All providers**
 
@@ -142,6 +149,7 @@ Linux needs GTK3, AppIndicator, a desktop with tray support, and a working Secre
 
 - Grok accounts and quota support OAuth / SuperGrok and compatible legacy sessions only. Run `grok login --oauth`, sign in from the app, import the current login, or paste credential JSON. API-key-only logins are not added as managed accounts. `GROK_HOME` is used when set, otherwise `~/.grok`.
 - The Grok Bot assistant panel does not need the Grok CLI. It reads only `~/.quosparr/grokbot-usage.json` (`%USERPROFILE%\.quosparr\grokbot-usage.json` on Windows). Copy [`examples/grokbot-usage.json`](examples/grokbot-usage.json) there, or use **Import JSON** on that panel.
+- The Cursor usage panel does not need the Grok CLI or a Cursor login inside this app. It reads only `~/.quosparr/cursor-usage.json` (`%USERPROFILE%\.quosparr\cursor-usage.json` on Windows). Copy [`examples/cursor-usage.json`](examples/cursor-usage.json) there, or use **Import JSON** on that panel. A file with only the required fields is [`examples/cursor-usage.min.json`](examples/cursor-usage.min.json).
 
 ## Desktop Widgets
 
@@ -169,6 +177,7 @@ Changes apply only after **Save Proxy Settings**. **Test Connection** fetches th
 - API-equivalent cost is computed from local session logs. Session contents are not uploaded.
 - Tokens and API keys are never written to logs, self-check output, or issue templates.
 - The Grok Bot assistant snapshot holds non-secret usage statistics. Tokens, cookies, and API keys found in an imported document are dropped and are not written to logs.
+- The Cursor usage snapshot holds non-secret usage statistics in a different file. Tokens, cookies, and API keys found in an imported document are dropped and are not written to logs.
 - Codex Reset Updates and update checks fetch only public data; no account, token, or session content is sent.
 
 ## Data Sources
@@ -180,6 +189,7 @@ Changes apply only after **Save Proxy Settings**. **Test Connection** fetches th
 - **Claude API-equivalent cost**: local Claude Code session logs priced with `anthropic-builtin-2026-10-14`. Replies are counted once by message id. Cache writes are split into 5-minute and 1-hour rates, and Fast mode has its own rates. Unknown models are not reported as exact costs. Days use the local time zone.
 - **Grok quota**: only the official CLI chat-proxy `/v1/billing?format=credits` endpoint. No browser cookies, no quota inferred from local logs, and no API billing mixed in.
 - **Grok Bot assistant weekly quota**: a local JSON snapshot only, schema version 1, at `~/.quosparr/grokbot-usage.json` (`%USERPROFILE%\.quosparr\grokbot-usage.json` on Windows). There is no public third-party billing API. The sample and field list are in [`examples/grokbot-usage.json`](examples/grokbot-usage.json): `schemaVersion`, `fetchedAt`, `plan`, `usedPercent`, `resetAt`, `onDemand.status`, `periodLabel`, `breakdown[].bot`, `breakdown[].sharePercent`, `breakdown[].activities[].name`, `breakdown[].activities[].sharePercent`, and `notes`. Optional fields stay on schema 1: `periodStart`, `history[]` (`at`, `usedPercent`), `cache` (`hitPercent`, `hits`, `misses`, `notes`), `usage` (`inputTokens`, `outputTokens`, `cacheReadTokens`, `model`, `costUsd`), and `costLines[]`. The panel uses them for burn rate, reset status, quota pace, cache hits, and API-equivalent cost. The assistant has no local session index to repair. A file with only the required fields is [`examples/grokbot-usage.min.json`](examples/grokbot-usage.min.json). `schemaVersion` must be `1`. `usedPercent` is from 0 to 100. Times are RFC3339. The file is non-secret usage stats, written with mode `0600`. Import it from the panel, or copy the sample onto that path. Replace the file atomically: write a temporary file in the same directory, then rename it. This app does not read cookies, Grok Bot settings pages, or Cursor dashboards.
+- **Cursor product usage**: a local JSON snapshot only, schema version 1, at `~/.quosparr/cursor-usage.json` (`%USERPROFILE%\.quosparr\cursor-usage.json` on Windows). There is no public third-party billing API. The sample and field list are in [`examples/cursor-usage.json`](examples/cursor-usage.json): `schemaVersion`, `fetchedAt`, `plan`, `included.usedPercent`, `included.resetAt`, `included.periodLabel`, `onDemand.status`, `onDemand.usedUsd`, `onDemand.limitUsd`, `breakdown[].name`, `breakdown[].sharePercent`, and `notes`. Optional fields stay on schema 1: `periodStart` and `history[]` (`at`, `usedPercent`). The panel uses them for included usage, reset, on-demand, breakdown, burn rate, and usage pace. A file with only the required fields is [`examples/cursor-usage.min.json`](examples/cursor-usage.min.json). `schemaVersion` must be `1`. `included` is required. `usedPercent` and `sharePercent` are from 0 to 100. `usedUsd` and `limitUsd` are null or a non-negative number. Times are RFC3339. The file is non-secret usage stats, written with mode `0600`. Import it from the panel, or copy the sample onto that path. Replace the file atomically: write a temporary file in the same directory, then rename it. This app does not read cookies, dashboard HTML, or the Cursor console. Grok Bot assistant usage stays in `grokbot-usage.json`.
 - **Grok API-equivalent cost**: local `turn_completed` usage priced with `xai-builtin-2026-09-27`, covering input, cached, output, and long-context rates. `costUsdTicks` is subscription accounting and is not used as API-equivalent cost.
 - **Codex Reset Updates**: the public feed at [didcodexreset.com/api/status.json](https://didcodexreset.com/api/status.json). Unofficial, advisory only, and may be delayed.
 - In the chart, “Official stats (all devices)” belongs to the current account, while “Local logs (all sessions)” scans this machine and may span accounts. They are not a subset of each other and should not be subtracted; Codex daily values for both use UTC days.

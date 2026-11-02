@@ -14,7 +14,7 @@ Quosparr는 macOS, Windows, Linux용 네이티브 메뉴 막대 / 시스템 트�
 
 </div>
 
-> 이 저장소는 [Licoy/Quosparr](https://github.com/Licoy/Quosparr)를 기반으로 한 [Alice-Marx의 포크](https://github.com/Alice-Marx/Quosparr)이며, GNU Affero General Public License v3.0([LICENSE](LICENSE))을 따릅니다. Alice가 추가한 것은 별도의 **Grok Bot 도우미** 주간 할당량 패널입니다. Grok Bot 도우미에는 **공개된 서드파티 결제 API가 없습니다**. 패널은 로컬 JSON 스냅샷만 읽습니다. 쿠키, Grok Bot 설정 페이지, Cursor 대시보드는 스크랩하지 않으며, 이 포크는 스냅샷을 쓰는 루틴을 포함하지 않습니다.
+> 이 저장소는 [Licoy/Quosparr](https://github.com/Licoy/Quosparr)를 기반으로 한 [Alice-Marx의 포크](https://github.com/Alice-Marx/Quosparr)이며, GNU Affero General Public License v3.0([LICENSE](LICENSE))을 따릅니다. Alice가 추가한 것은 별도의 **Grok Bot 도우미** 주간 할당량 패널과 별도의 **Cursor** 사용량 패널입니다. 둘 다 **공개된 서드파티 결제 API가 없습니다**. 각 패널은 자신의 로컬 JSON 스냅샷만 읽습니다. 쿠키, Grok Bot 설정 페이지, Cursor 대시보드 HTML은 스크랩하지 않으며, 이 포크는 어느 스냅샷도 쓰는 루틴을 포함하지 않습니다.
 
 ## 주요 기능
 
@@ -51,6 +51,13 @@ Quosparr는 macOS, Windows, Linux용 네이티브 메뉴 막대 / 시스템 트�
 - 사용 비율, 초기화 시각, 온디맨드 요약을 보여 줍니다. 스냅샷에 분해가 있으면 비중이 큰 봇과 활동을 보여 줍니다.
 - 새로고침은 스냅샷 파일의 수정 시각을 감시하고, 헤더 새로고침도 그 파일만 다시 읽습니다. 스냅샷이 없으면 빈 상태가 가져오기 경로를 설명합니다.
 - **JSON 가져오기**는 선택한 파일을 검증한 뒤 스냅샷 경로에 복사합니다. 토큰을 포함한 알 수 없는 필드는 버려집니다. 내장 작성기는 없습니다. [`examples/grokbot-usage.json`](examples/grokbot-usage.json)을 복사하거나 파일을 직접 바꾸세요. 이후 루틴은 같은 디렉터리에 임시 파일을 쓴 다음 이름을 바꿔 교체해야 합니다.
+
+**Cursor 사용량**
+
+- 패널 탭 이름은 **Cursor**(简体中文: **Cursor 额度**)이며 항상 표시되고 **Grok Bot**, **Grok** CLI 탭과 구분됩니다. Cursor IDE / Cloud Agents / Cursor 제품 사용량이며, Grok Bot 도우미 주간 할당량도 xAI Grok CLI도 아닙니다.
+- 포함 사용 비율, 초기화 시각, 온디맨드 상태, 선택적 온디맨드 금액을 보여 줍니다. 스냅샷에 분해가 있으면 비중이 큰 제품을 보여 줍니다. 선택 항목 `periodStart`와 `history`는 소모 속도와 사용량 추정에 쓰입니다.
+- 새로고침은 스냅샷 파일의 수정 시각을 감시하고, 헤더 새로고침도 그 파일만 다시 읽습니다. 스냅샷이 없으면 빈 상태가 가져오기 경로와 공식 API가 없음을 설명합니다.
+- **JSON 가져오기**는 선택한 파일을 검증한 뒤 스냅샷 경로에 복사합니다. 토큰을 포함한 알 수 없는 필드는 버려집니다. 내장 작성기는 없습니다. [`examples/cursor-usage.json`](examples/cursor-usage.json)을 복사하거나 파일을 직접 바꾸세요. 이후 루틴은 같은 디렉터리에 임시 파일을 쓴 다음 이름을 바꿔 교체해야 합니다.
 
 **세 공급자 공통**
 
@@ -142,6 +149,7 @@ Linux에는 GTK3, AppIndicator, 트레이를 지원하는 데스크톱, 프록�
 
 - Grok 계정과 할당량은 OAuth / SuperGrok 및 호환 레거시 세션만 지원합니다. `grok login --oauth`를 실행하거나, 앱에서 로그인하거나, 현재 로그인을 가져오거나, 자격 증명 JSON을 붙여넣으세요. API 키만 있는 로그인은 관리 계정으로 추가되지 않습니다. `GROK_HOME`이 설정되어 있으면 그 값을 쓰고, 아니면 `~/.grok`를 씁니다.
 - Grok Bot 도우미 패널은 Grok CLI가 필요 없습니다. `~/.quosparr/grokbot-usage.json`(Windows에서는 `%USERPROFILE%\.quosparr\grokbot-usage.json`)만 읽습니다. [`examples/grokbot-usage.json`](examples/grokbot-usage.json)을 그 경로에 복사하거나, 해당 패널에서 **JSON 가져오기**를 사용하세요.
+- Cursor 사용량 패널은 Grok CLI가 필요 없고, 이 앱 안에서 Cursor에 로그인하지도 않습니다. `~/.quosparr/cursor-usage.json`(Windows에서는 `%USERPROFILE%\.quosparr\cursor-usage.json`)만 읽습니다. [`examples/cursor-usage.json`](examples/cursor-usage.json)을 그 경로에 복사하거나, 해당 패널에서 **JSON 가져오기**를 사용하세요. 필수 필드만 있는 파일은 [`examples/cursor-usage.min.json`](examples/cursor-usage.min.json)입니다.
 
 ## 데스크톱 위젯
 
@@ -169,6 +177,7 @@ Linux에는 GTK3, AppIndicator, 트레이를 지원하는 데스크톱, 프록�
 - API 환산 비용은 로컬 세션 로그에서 계산합니다. 세션 내용은 업로드하지 않습니다.
 - 토큰과 API 키는 로그, 자가 진단 출력, 이슈 템플릿에 쓰지 않습니다.
 - Grok Bot 도우미 스냅샷은 비밀이 아닌 사용량 통계만 담습니다. 가져온 문서의 토큰, 쿠키, API 키는 버려지며 로그에 쓰이지 않습니다.
+- Cursor 사용량 스냅샷은 다른 파일이며 비밀이 아닌 사용량 통계만 담습니다. 가져온 문서의 토큰, 쿠키, API 키는 버려지며 로그에 쓰이지 않습니다.
 - Codex 초기화 업데이트와 업데이트 확인은 공개 데이터만 가져오며 계정, 토큰, 세션 내용은 보내지 않습니다.
 
 ## 데이터 출처
@@ -180,6 +189,7 @@ Linux에는 GTK3, AppIndicator, 트레이를 지원하는 데스크톱, 프록�
 - **Claude API 환산 비용**: Claude Code 로컬 세션 로그와 가격표 `anthropic-builtin-2026-10-14`로 계산합니다. 같은 답변은 메시지 ID로 한 번만 셉니다. 캐시 쓰기는 5분과 1시간으로 나누고 Fast 요금은 따로 둡니다. 알 수 없는 모델은 정확한 비용을 보고하지 않습니다. 일 경계는 로컬 시간대입니다.
 - **Grok 할당량**: 공식 CLI chat-proxy `/v1/billing?format=credits` 엔드포인트만 사용합니다. 브라우저 쿠키, 로컬 로그에서 추정한 할당량, API 결제는 섞지 않습니다.
 - **Grok Bot 도우미 주간 할당량**: 로컬 JSON 스냅샷만 사용하며 schema 버전은 1입니다. 경로는 `~/.quosparr/grokbot-usage.json`(Windows는 `%USERPROFILE%\.quosparr\grokbot-usage.json`)입니다. 공개된 서드파티 결제 API는 없습니다. 예시와 필드는 [`examples/grokbot-usage.json`](examples/grokbot-usage.json)에 있습니다. `schemaVersion`, `fetchedAt`, `plan`, `usedPercent`, `resetAt`, `onDemand.status`, `periodLabel`, `breakdown[].bot`, `breakdown[].sharePercent`, `breakdown[].activities[].name`, `breakdown[].activities[].sharePercent`, `notes`. 선택 필드는 그대로 schema 1입니다. `periodStart`, `history[]`(`at`, `usedPercent`), `cache`(`hitPercent`, `hits`, `misses`, `notes`), `usage`(`inputTokens`, `outputTokens`, `cacheReadTokens`, `model`, `costUsd`), `costLines[]`. 패널은 이 값으로 소모 속도, 재설정, 할당량 추정, 캐시 적중, API 환산 비용을 표시합니다. 도우미에는 고칠 로컬 세션 인덱스가 없습니다. 필수 필드만 있는 파일은 [`examples/grokbot-usage.min.json`](examples/grokbot-usage.min.json)입니다. `schemaVersion`은 `1`이어야 합니다. `usedPercent`는 0에서 100입니다. 시각은 RFC3339입니다. 파일은 비밀이 아닌 사용량 통계이며 권한은 `0600`입니다. 패널에서 가져오거나 예시를 그 경로에 복사하세요. 파일 교체는 원자적으로 해야 합니다. 같은 디렉터리에 임시 파일을 쓴 다음 이름을 바꿉니다. 이 앱은 쿠키, Grok Bot 설정 페이지, Cursor 대시보드를 읽지 않습니다.
+- **Cursor 제품 사용량**: 로컬 JSON 스냅샷만 사용하며 schema 버전은 1입니다. 경로는 `~/.quosparr/cursor-usage.json`(Windows는 `%USERPROFILE%\.quosparr\cursor-usage.json`)입니다. 공개된 서드파티 결제 API는 없습니다. 예시와 필드는 [`examples/cursor-usage.json`](examples/cursor-usage.json)에 있습니다. `schemaVersion`, `fetchedAt`, `plan`, `included.usedPercent`, `included.resetAt`, `included.periodLabel`, `onDemand.status`, `onDemand.usedUsd`, `onDemand.limitUsd`, `breakdown[].name`, `breakdown[].sharePercent`, `notes`. 선택 필드는 그대로 schema 1입니다. `periodStart`, `history[]`(`at`, `usedPercent`). 패널은 이 값으로 포함 사용량, 재설정, 온디맨드, 구성, 소모 속도, 사용량 추정을 표시합니다. 필수 필드만 있는 파일은 [`examples/cursor-usage.min.json`](examples/cursor-usage.min.json)입니다. `schemaVersion`은 `1`이어야 합니다. `included`는 필수입니다. `usedPercent`와 `sharePercent`는 0에서 100입니다. `usedUsd`와 `limitUsd`는 null이거나 0 이상인 수입니다. 시각은 RFC3339입니다. 파일은 비밀이 아닌 사용량 통계이며 권한은 `0600`입니다. 패널에서 가져오거나 예시를 그 경로에 복사하세요. 파일 교체는 원자적으로 해야 합니다. 같은 디렉터리에 임시 파일을 쓴 다음 이름을 바꿉니다. 이 앱은 쿠키, 대시보드 HTML, Cursor 콘솔을 읽지 않습니다. Grok Bot 도우미 사용량은 `grokbot-usage.json`에 남습니다.
 - **Grok API 환산 비용**: 로컬 `turn_completed` 사용량을 `xai-builtin-2026-09-27`로 계산하며 입력, 캐시, 출력, 긴 컨텍스트 요금을 포함합니다. `costUsdTicks`는 구독 회계이므로 API 환산 비용으로 쓰지 않습니다.
 - **Codex 초기화 업데이트**: [didcodexreset.com/api/status.json](https://didcodexreset.com/api/status.json)의 공개 피드. 비공식이며 참고용이고 지연될 수 있습니다.
 - 차트의 「공식 통계(모든 기기)」는 현재 계정에 속하고, 「로컬 로그(모든 세션)」는 이 컴퓨터를 스캔하므로 여러 계정에 걸칠 수 있습니다. 둘은 서로의 부분집합이 아니므로 빼면 안 되며, 두 Codex 일별 값은 모두 UTC 날짜를 씁니다.

@@ -502,6 +502,8 @@ func trayProviderIcon(p store.Provider) *ui.SVG {
 		return grokProviderIcon
 	case store.ProviderGrokBot:
 		return icChat
+	case store.ProviderCursor:
+		return icGauge
 	}
 	return nil
 }

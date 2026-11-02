@@ -27,11 +27,15 @@ func panelHeader(c *ui.Context, a *App, l l10n.Localizer, prefs store.Preference
 			ui.Spacer(c).Grow(1)
 			panelHeaderButtons(c, a, l, prefs, acts, panelBusy(snap, grokView))
 		})
-		if providers := grokBotTabs(prefs.PanelSelection()); len(providers) > 1 {
+		if providers := panelTabs(prefs.PanelSelection()); len(providers) > 1 {
 			providerStrip(c, a, l, snap, providers, prefs.SelectedProvider, acts.SelectProvider)
 		}
 		if prefs.SelectedProvider == store.ProviderGrokBot {
 			grokBotIdentityRow(c, l, a)
+			return
+		}
+		if prefs.SelectedProvider == store.ProviderCursor {
+			cursorIdentityRow(c, l, a)
 			return
 		}
 		if grokView {
@@ -59,12 +63,15 @@ func panelBusy(snap runway.Snapshot, grokView bool) bool {
 	return snap.Refresh.Refreshing()
 }
 
-// grokBotTabs appends the assistant tab. It is not one of the CLI providers
-// the settings list can hide, and its label is never the Grok CLI name.
-func grokBotTabs(providers []store.Provider) []store.Provider {
+// panelTabs appends the snapshot tabs. They are not CLI providers the
+// settings list can hide. Grok Bot is the assistant weekly quota. Cursor is
+// Cursor product usage. The two labels never swap.
+func panelTabs(providers []store.Provider) []store.Provider {
 	out := slices.Clone(providers)
-	if !slices.Contains(out, store.ProviderGrokBot) {
-		out = append(out, store.ProviderGrokBot)
+	for _, extra := range []store.Provider{store.ProviderGrokBot, store.ProviderCursor} {
+		if !slices.Contains(out, extra) {
+			out = append(out, extra)
+		}
 	}
 	return out
 }
@@ -102,8 +109,11 @@ func providerStrip(c *ui.Context, a *App, l l10n.Localizer, snap runway.Snapshot
 						ui.Text(c, name).FontSize(fsCallout).TextColor(inkTertiary(t)).SingleLine()
 					})
 					meters := providerMeters(snap, p)
-					if p == store.ProviderGrokBot {
+					switch p {
+					case store.ProviderGrokBot:
 						meters = a.grokBotMeters(time.Now())
+					case store.ProviderCursor:
+						meters = a.cursorMeters(time.Now())
 					}
 					meter, ok := runway.ShortestWindowMeter(meters)
 					stripBar(c, meter, ok, selected)
@@ -187,6 +197,10 @@ func panelHeaderButtons(c *ui.Context, a *App, l l10n.Localizer, prefs store.Pre
 func refreshEverything(a *App, acts PanelActions) {
 	if a.settings != nil && a.settings.Prefs().SelectedProvider == store.ProviderGrokBot {
 		a.refreshGrokBot()
+		return
+	}
+	if a.settings != nil && a.settings.Prefs().SelectedProvider == store.ProviderCursor {
+		a.refreshCursor()
 		return
 	}
 	acts.Refresh()

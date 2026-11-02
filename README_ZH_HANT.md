@@ -14,7 +14,7 @@ Quosparr 是適用於 macOS、Windows、Linux 的原生選單列 / 系統匣應�
 
 </div>
 
-> 本儲存庫是 [Alice-Marx 對 Licoy/Quosparr 的 fork](https://github.com/Alice-Marx/Quosparr)，上游為 [Licoy/Quosparr](https://github.com/Licoy/Quosparr)，遵循 GNU Affero General Public License v3.0（[LICENSE](LICENSE)）。Alice 增加的是獨立的 **Grok Bot 助手**每週額度面板。Grok Bot 助手**沒有公開的第三方計費 API**。面板只讀取本機 JSON 快照，不抓取 Cookie、Grok Bot 設定頁或 Cursor 儀表板，本 fork 也不附帶寫入該快照的例程。
+> 本儲存庫是 [Alice-Marx 對 Licoy/Quosparr 的 fork](https://github.com/Alice-Marx/Quosparr)，上游為 [Licoy/Quosparr](https://github.com/Licoy/Quosparr)，遵循 GNU Affero General Public License v3.0（[LICENSE](LICENSE)）。Alice 增加的是獨立的 **Grok Bot 助手**每週額度面板，以及獨立的 **Cursor 額度**面板。兩者都**沒有公開的第三方計費 API**。每個面板只讀取自己的本機 JSON 快照，不抓取 Cookie、Grok Bot 設定頁或 Cursor 儀表板 HTML，本 fork 也不附帶寫入這些快照的例程。
 
 ## 亮點
 
@@ -51,6 +51,13 @@ Quosparr 是適用於 macOS、Windows、Linux 的原生選單列 / 系統匣應�
 - 顯示已用百分比、重設時間與隨需用量摘要。快照帶有拆分時，顯示占比最高的機器人與活動。
 - 重新整理會監視快照檔案的修改時間，標題列重新整理也只重讀該檔案。沒有快照時，空白狀態會說明匯入路徑。
 - **匯入 JSON** 會在驗證後把所選檔案寫入快照路徑。未知欄位（含 token）會被捨棄。本儲存庫沒有內建寫入程式。可複製 [`examples/grokbot-usage.json`](examples/grokbot-usage.json)，或自行取代該檔案。之後的例程應在同一目錄寫入暫存檔，再改名取代。
+
+**Cursor 額度**
+
+- 面板標籤為 **Cursor 額度**（英文 **Cursor**），始終顯示，並與 **Grok Bot 助手**、**Grok** CLI 標籤分開。它表示 Cursor IDE / Cloud Agents / Cursor 產品用量，不是 Grok Bot 助手每週額度，也不是 xAI Grok CLI。
+- 顯示包含額度的已用百分比、重設時間、隨需狀態，以及可選的隨需美元金額。快照帶有拆分時，顯示占比最高的產品。可選的 `periodStart` 與 `history` 用於速率和用量推算。
+- 重新整理會監視快照檔案的修改時間，標題列重新整理也只重讀該檔案。沒有快照時，空白狀態會說明匯入路徑，並註明沒有官方介面。
+- **匯入 JSON** 會在驗證後把所選檔案寫入快照路徑。未知欄位（含 token）會被捨棄。本儲存庫沒有內建寫入程式。可複製 [`examples/cursor-usage.json`](examples/cursor-usage.json)，或自行取代該檔案。之後的例程應在同一目錄寫入暫存檔，再改名取代。
 
 **三個供應商通用**
 
@@ -142,6 +149,7 @@ Linux 需要 GTK3、AppIndicator、支援系統匣的桌面環境，以及可用
 
 - Grok 帳號與額度僅支援 OAuth / SuperGrok 及相容的 legacy session。可執行 `grok login --oauth`、在應用程式內登入、匯入目前登入，或貼上憑證 JSON。僅使用 API Key 的登入不會加入託管帳號。若已設定 `GROK_HOME` 則使用該目錄，否則使用 `~/.grok`。
 - Grok Bot 助手面板不需要 Grok CLI。它只讀取 `~/.quosparr/grokbot-usage.json`（Windows 為 `%USERPROFILE%\.quosparr\grokbot-usage.json`）。把 [`examples/grokbot-usage.json`](examples/grokbot-usage.json) 複製到該路徑，或在該面板使用 **匯入 JSON**。
+- Cursor 額度面板不需要 Grok CLI，也不在本應用程式裡登入 Cursor。它只讀取 `~/.quosparr/cursor-usage.json`（Windows 為 `%USERPROFILE%\.quosparr\cursor-usage.json`）。把 [`examples/cursor-usage.json`](examples/cursor-usage.json) 複製到該路徑，或在該面板使用 **匯入 JSON**。只含必填欄位的檔案是 [`examples/cursor-usage.min.json`](examples/cursor-usage.min.json)。
 
 ## 桌面小工具
 
@@ -169,6 +177,7 @@ Linux 需要 GTK3、AppIndicator、支援系統匣的桌面環境，以及可用
 - API 等價成本依本機工作階段日誌計算，不會上傳工作階段內容。
 - token 與 API Key 絕不會寫入日誌、自我檢查輸出或 issue 範本。
 - Grok Bot 助手快照只含非金鑰的用量統計。匯入文件裡的 token、Cookie 與 API Key 會被捨棄，也不會寫入日誌。
+- Cursor 額度快照是另一份檔案，只含非金鑰的用量統計。匯入文件裡的 token、Cookie 與 API Key 會被捨棄，也不會寫入日誌。
 - Codex 重設動態與更新檢查只讀取公開資料，不會傳送帳號、token 或工作階段內容。
 
 ## 資料來源
@@ -180,6 +189,7 @@ Linux 需要 GTK3、AppIndicator、支援系統匣的桌面環境，以及可用
 - **Claude API 等價成本**：依 Claude Code 本機工作階段日誌與價格表 `anthropic-builtin-2026-10-14` 計算。同一則回覆按訊息 ID 只計一次。快取寫入分為 5 分鐘與 1 小時，Fast 檔單獨計價。未知模型不報告精確費用。按日統計使用本地時區。
 - **Grok 額度**：僅使用官方 CLI chat-proxy 的 `/v1/billing?format=credits` 端點。不讀取瀏覽器 Cookie，不從本機日誌推算額度，也不混入 API 帳單。
 - **Grok Bot 助手每週額度**：只使用本機 JSON 快照，schema 版本 1，路徑為 `~/.quosparr/grokbot-usage.json`（Windows 為 `%USERPROFILE%\.quosparr\grokbot-usage.json`）。沒有公開的第三方計費 API。範例與欄位見 [`examples/grokbot-usage.json`](examples/grokbot-usage.json)：`schemaVersion`、`fetchedAt`、`plan`、`usedPercent`、`resetAt`、`onDemand.status`、`periodLabel`、`breakdown[].bot`、`breakdown[].sharePercent`、`breakdown[].activities[].name`、`breakdown[].activities[].sharePercent`、`notes`。選用欄位仍是 schema 1：`periodStart`、`history[]`（`at`、`usedPercent`）、`cache`（`hitPercent`、`hits`、`misses`、`notes`）、`usage`（`inputTokens`、`outputTokens`、`cacheReadTokens`、`model`、`costUsd`）與 `costLines[]`。面板用它們顯示速率、重置、額度推算、快取命中和 API 等價成本。助手沒有可修復的本機工作階段索引。只含必填欄位的檔案是 [`examples/grokbot-usage.min.json`](examples/grokbot-usage.min.json)。`schemaVersion` 必須為 `1`。`usedPercent` 為 0 到 100。時間為 RFC3339。該檔案是非金鑰用量統計，權限 `0600`。可從面板匯入，或把範例複製到該路徑。取代檔案須以原子方式完成：先在同一目錄寫暫存檔，再改名。本應用程式不讀取 Cookie、Grok Bot 設定頁或 Cursor 儀表板。
+- **Cursor 產品用量**：只使用本機 JSON 快照，schema 版本 1，路徑為 `~/.quosparr/cursor-usage.json`（Windows 為 `%USERPROFILE%\.quosparr\cursor-usage.json`）。沒有公開的第三方計費 API。範例與欄位見 [`examples/cursor-usage.json`](examples/cursor-usage.json)：`schemaVersion`、`fetchedAt`、`plan`、`included.usedPercent`、`included.resetAt`、`included.periodLabel`、`onDemand.status`、`onDemand.usedUsd`、`onDemand.limitUsd`、`breakdown[].name`、`breakdown[].sharePercent`、`notes`。選用欄位仍是 schema 1：`periodStart`、`history[]`（`at`、`usedPercent`）。面板用它們顯示包含額度、重置、隨需、用量構成、速率和用量推算。只含必填欄位的檔案是 [`examples/cursor-usage.min.json`](examples/cursor-usage.min.json)。`schemaVersion` 必須為 `1`。`included` 必填。`usedPercent` 與 `sharePercent` 為 0 到 100。`usedUsd` 與 `limitUsd` 為 null 或非負數字。時間為 RFC3339。該檔案是非金鑰用量統計，權限 `0600`。可從面板匯入，或把範例複製到該路徑。取代檔案須以原子方式完成：先在同一目錄寫暫存檔，再改名。本應用程式不讀取 Cookie、儀表板 HTML 或 Cursor 主控台。Grok Bot 助手用量仍在 `grokbot-usage.json`。
 - **Grok API 等價成本**：依本機 `turn_completed` 用量與價格表 `xai-builtin-2026-09-27` 計算，區分輸入、快取、輸出及長上下文費率。`costUsdTicks` 屬於訂閱額度記帳，不作為 API 等價成本。
 - **Codex 重設動態**：來自公開來源 [didcodexreset.com/api/status.json](https://didcodexreset.com/api/status.json)。非官方，僅供參考，可能延遲。
 - 圖表中的「官方統計（多端）」屬於目前帳號，「本機日誌（全部本機工作階段）」掃描本機，可能跨越多個帳號。兩者並非包含關係，不應相減；Codex 兩種每日數值皆以 UTC 日界計算。

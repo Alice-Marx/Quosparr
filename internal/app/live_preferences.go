@@ -57,6 +57,12 @@ func (rt *liveApp) requestRefresh(s *Settings, section runway.Section) {
 		}
 		return
 	}
+	if s != nil && s.Prefs().SelectedProvider == store.ProviderCursor {
+		if rt.host != nil {
+			rt.host.refreshCursor()
+		}
+		return
+	}
 	var p *store.Preferences
 	if s != nil {
 		current := s.Prefs()

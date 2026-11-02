@@ -14,7 +14,7 @@ Quosparr は macOS、Windows、Linux 向けのネイティブなメニューバ�
 
 </div>
 
-> このリポジトリは [Licoy/Quosparr](https://github.com/Licoy/Quosparr) の [Alice-Marx によるフォーク](https://github.com/Alice-Marx/Quosparr) で、GNU Affero General Public License v3.0（[LICENSE](LICENSE)）に従います。Alice が加えた変更は、独立した **Grok Bot アシスタント**の週次クォータパネルです。Grok Bot アシスタントには**公開されたサードパーティ課金 API がありません**。パネルはローカル JSON スナップショットだけを読みます。Cookie、Grok Bot の設定ページ、Cursor ダッシュボードは取得せず、このフォークにはスナップショットを書くルーチンも含まれません。
+> このリポジトリは [Licoy/Quosparr](https://github.com/Licoy/Quosparr) の [Alice-Marx によるフォーク](https://github.com/Alice-Marx/Quosparr) で、GNU Affero General Public License v3.0（[LICENSE](LICENSE)）に従います。Alice が加えた変更は、独立した **Grok Bot アシスタント**の週次クォータパネルと、独立した **Cursor** 使用量パネルです。どちらにも**公開されたサードパーティ課金 API はありません**。各パネルは自分のローカル JSON スナップショットだけを読みます。Cookie、Grok Bot の設定ページ、Cursor ダッシュボードの HTML は取得せず、このフォークにはどちらのスナップショットを書くルーチンも含まれません。
 
 ## ハイライト
 
@@ -51,6 +51,13 @@ Quosparr は macOS、Windows、Linux 向けのネイティブなメニューバ�
 - 使用率、リセット時刻、オンデマンドの要約を表示します。スナップショットに内訳があれば、割合の高いボットとアクティビティを表示します。
 - 更新はスナップショットファイルの更新時刻を監視し、ヘッダーの更新もそのファイルだけを読み直します。スナップショットが無いときは、空の状態が取り込みパスを説明します。
 - **JSON を取り込む**は、選んだファイルを検証してからスナップショットのパスへコピーします。トークンを含む未知のフィールドは捨てられます。組み込みの書き込み処理はありません。[`examples/grokbot-usage.json`](examples/grokbot-usage.json) をコピーするか、自分でファイルを置き換えてください。後から加えるルーチンは、同じディレクトリに一時ファイルを書いてから名前を変更して置き換えてください。
+
+**Cursor 使用量**
+
+- パネルのタブは **Cursor**（简体中文: **Cursor 额度**）で、常に表示され、**Grok Bot** と **Grok** CLI のタブとは別です。Cursor IDE / Cloud Agents / Cursor 製品の使用量であり、Grok Bot アシスタントの週次クォータでも xAI Grok CLI でもありません。
+- 含まれる使用率、リセット時刻、オンデマンドの状態、任意のオンデマンド金額を表示します。スナップショットに内訳があれば、割合の高い製品を表示します。任意の `periodStart` と `history` は消費速度と使用量の見積もりに使います。
+- 更新はスナップショットファイルの更新時刻を監視し、ヘッダーの更新もそのファイルだけを読み直します。スナップショットが無いときは、空の状態が取り込みパスと、公式 API がないことを説明します。
+- **JSON を取り込む**は、選んだファイルを検証してからスナップショットのパスへコピーします。トークンを含む未知のフィールドは捨てられます。組み込みの書き込み処理はありません。[`examples/cursor-usage.json`](examples/cursor-usage.json) をコピーするか、自分でファイルを置き換えてください。後から加えるルーチンは、同じディレクトリに一時ファイルを書いてから名前を変更して置き換えてください。
 
 **3 つのプロバイダー共通**
 
@@ -142,6 +149,7 @@ Linux には GTK3、AppIndicator、トレイに対応したデスクトップ、
 
 - Grok のアカウントとクォータは、OAuth / SuperGrok と互換のレガシーセッションのみに対応します。`grok login --oauth` を実行するか、アプリ内でサインインするか、現在のログインを取り込むか、資格情報 JSON を貼り付けてください。API キーのみのログインは管理アカウントとして追加されません。`GROK_HOME` が設定されていればそれを使い、設定されていなければ `~/.grok` を使います。
 - Grok Bot アシスタントのパネルに Grok CLI は不要です。読むのは `~/.quosparr/grokbot-usage.json`（Windows では `%USERPROFILE%\.quosparr\grokbot-usage.json`）だけです。[`examples/grokbot-usage.json`](examples/grokbot-usage.json) をそのパスへコピーするか、そのパネルの **JSON を取り込む** を使ってください。
+- Cursor 使用量パネルに Grok CLI は不要で、このアプリの中で Cursor にログインもしません。読むのは `~/.quosparr/cursor-usage.json`（Windows では `%USERPROFILE%\.quosparr\cursor-usage.json`）だけです。[`examples/cursor-usage.json`](examples/cursor-usage.json) をそのパスへコピーするか、そのパネルの **JSON を取り込む** を使ってください。必須項目だけのファイルは [`examples/cursor-usage.min.json`](examples/cursor-usage.min.json) です。
 
 ## デスクトップウィジェット
 
@@ -169,6 +177,7 @@ Linux には GTK3、AppIndicator、トレイに対応したデスクトップ、
 - API 換算コストはローカルのセッションログから計算されます。セッションの内容はアップロードされません。
 - token や API キーが、ログ、セルフチェックの出力、issue テンプレートに書き込まれることはありません。
 - Grok Bot アシスタントのスナップショットは、秘密ではない使用量の統計だけを持ちます。取り込んだ文書にあるトークン、Cookie、API キーは捨てられ、ログにも書かれません。
+- Cursor 使用量のスナップショットは別ファイルで、秘密ではない使用量の統計だけを持ちます。取り込んだ文書にあるトークン、Cookie、API キーは捨てられ、ログにも書かれません。
 - Codex リセット更新とアップデートの確認は公開データのみを取得し、アカウント、token、セッションの内容は送信されません。
 
 ## データソース
@@ -180,6 +189,7 @@ Linux には GTK3、AppIndicator、トレイに対応したデスクトップ、
 - **Claude の API 換算コスト**: Claude Code のローカルセッションログと価格表 `anthropic-builtin-2026-10-14` で計算します。同じ応答はメッセージ ID で一度だけ数えます。キャッシュ書き込みは 5 分と 1 時間に分け、Fast 料金は別です。未知のモデルに正確な費用は出しません。日界はローカルタイムゾーンです。
 - **Grok のクォータ**: 公式 CLI の chat-proxy `/v1/billing?format=credits` エンドポイントのみを使います。ブラウザの Cookie は使わず、ローカルログからクォータを推測せず、API 課金も混ぜません。
 - **Grok Bot アシスタントの週次クォータ**: ローカル JSON スナップショットのみ、スキーマバージョン 1、パスは `~/.quosparr/grokbot-usage.json`（Windows は `%USERPROFILE%\.quosparr\grokbot-usage.json`）。公開されたサードパーティ課金 API はありません。例とフィールドは [`examples/grokbot-usage.json`](examples/grokbot-usage.json) にあります。`schemaVersion`、`fetchedAt`、`plan`、`usedPercent`、`resetAt`、`onDemand.status`、`periodLabel`、`breakdown[].bot`、`breakdown[].sharePercent`、`breakdown[].activities[].name`、`breakdown[].activities[].sharePercent`、`notes`。任意項目も schema 1 のままです。`periodStart`、`history[]`（`at`、`usedPercent`）、`cache`（`hitPercent`、`hits`、`misses`、`notes`）、`usage`（`inputTokens`、`outputTokens`、`cacheReadTokens`、`model`、`costUsd`）、`costLines[]`。パネルはこれらで消費速度、リセット、枠の見積もり、キャッシュヒット、API 相当コストを表示します。アシスタントには修復できるローカルセッション索引がありません。必須項目だけのファイルは [`examples/grokbot-usage.min.json`](examples/grokbot-usage.min.json) です。`schemaVersion` は `1` でなければなりません。`usedPercent` は 0 から 100 です。時刻は RFC3339 です。ファイルは秘密ではない使用量統計で、権限は `0600` です。パネルから取り込むか、例をそのパスへコピーしてください。置き換えはアトミックに行います。同じディレクトリに一時ファイルを書いてから名前を変更します。このアプリは Cookie、Grok Bot の設定ページ、Cursor ダッシュボードを読みません。
+- **Cursor 製品の使用量**: ローカル JSON スナップショットのみ、スキーマバージョン 1、パスは `~/.quosparr/cursor-usage.json`（Windows は `%USERPROFILE%\.quosparr\cursor-usage.json`）。公開されたサードパーティ課金 API はありません。例とフィールドは [`examples/cursor-usage.json`](examples/cursor-usage.json) にあります。`schemaVersion`、`fetchedAt`、`plan`、`included.usedPercent`、`included.resetAt`、`included.periodLabel`、`onDemand.status`、`onDemand.usedUsd`、`onDemand.limitUsd`、`breakdown[].name`、`breakdown[].sharePercent`、`notes`。任意項目も schema 1 のままです。`periodStart`、`history[]`（`at`、`usedPercent`）。パネルはこれらで含まれる使用量、リセット、オンデマンド、内訳、消費速度、使用量の見積もりを表示します。必須項目だけのファイルは [`examples/cursor-usage.min.json`](examples/cursor-usage.min.json) です。`schemaVersion` は `1` でなければなりません。`included` は必須です。`usedPercent` と `sharePercent` は 0 から 100 です。`usedUsd` と `limitUsd` は null か 0 以上の数です。時刻は RFC3339 です。ファイルは秘密ではない使用量統計で、権限は `0600` です。パネルから取り込むか、例をそのパスへコピーしてください。置き換えはアトミックに行います。同じディレクトリに一時ファイルを書いてから名前を変更します。このアプリは Cookie、ダッシュボード HTML、Cursor コンソールを読みません。Grok Bot アシスタントの使用量は `grokbot-usage.json` のままです。
 - **Grok の API 換算コスト**: ローカルの `turn_completed` 使用量を `xai-builtin-2026-09-27` で計算し、入力、キャッシュ、出力、長いコンテキストの料金を区別します。`costUsdTicks` はサブスクリプションの会計値であり、API 換算コストには使いません。
 - **Codex リセット更新**: 公開フィード [didcodexreset.com/api/status.json](https://didcodexreset.com/api/status.json) から取得します。非公式で参考情報にすぎず、遅れることがあります。
 - チャートの「公式統計（全デバイス）」は現在のアカウントに属し、「ローカルログ（全セッション）」はこの端末をスキャンするため、複数のアカウントにまたがることがあります。両者は一方がもう一方の部分集合というわけではなく、引き算してはいけません。どちらの Codex の日次値も UTC の日で集計されます。

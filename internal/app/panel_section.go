@@ -22,8 +22,12 @@ func sectionBlock(c *ui.Context, first *bool, body func()) {
 
 // panelBody follows the saved module order and provider support.
 func panelBody(c *ui.Context, a *App, l l10n.Localizer, prefs store.Preferences, snap runway.Snapshot, acts PanelActions, state *panelState) {
-	if prefs.SelectedProvider == store.ProviderGrokBot {
+	switch prefs.SelectedProvider {
+	case store.ProviderGrokBot:
 		panelGrokBot(c, a, l, prefs, state)
+		return
+	case store.ProviderCursor:
+		panelCursor(c, a, l, prefs, state)
 		return
 	}
 	snap.Provider = prefs.SelectedProvider

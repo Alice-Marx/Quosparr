@@ -240,3 +240,30 @@ func TestStatusBarGrokBotDoesNotReuseCodexMeters(t *testing.T) {
 		t.Fatalf("empty grok bot reused codex: %+v", c)
 	}
 }
+
+func TestStatusBarCursorDoesNotReuseOtherMeters(t *testing.T) {
+	codex := testMeter("5h", 80, FiveHourMinutes, SourceStandard)
+	week := testMeter("week", 7, WeeklyMinutes, SourceStandard)
+	assistant := testMeter("assistant", 90, WeeklyMinutes, SourceStandard)
+	p := store.DefaultPreferences()
+	p.SelectedProvider = store.ProviderCursor
+	v := BuildStatusBar(zh, StatusInputs{
+		Prefs: p, Provider: store.ProviderCursor,
+		CodexMeters: []Meter{codex}, GrokBotMeters: []Meter{assistant}, CursorMeters: []Meter{week},
+		Now: time.Now(),
+	})
+	if len(v.Components) != 1 || v.Components[0].Provider != store.ProviderCursor {
+		t.Fatalf("components = %+v", v.Components)
+	}
+	cell := v.Components[0].Cells[0]
+	if cell.Provider != store.ProviderCursor || cell.Empty || cell.Remaining != week.RemainingPercent || strings.Contains(v.Tooltip, "Codex") || strings.Contains(v.Tooltip, "Grok Bot") {
+		t.Fatalf("cell = %+v tip %q", cell, v.Tooltip)
+	}
+	if !strings.Contains(v.Tooltip, "Cursor") {
+		t.Fatalf("tip = %q", v.Tooltip)
+	}
+	empty := BuildStatusBar(zh, StatusInputs{Prefs: p, Provider: store.ProviderCursor, CodexMeters: []Meter{codex}, GrokBotMeters: []Meter{assistant}, Now: time.Now()})
+	if c := empty.Components[0].Cells[0]; !c.Empty || c.Provider != store.ProviderCursor {
+		t.Fatalf("empty cursor reused another meter: %+v", c)
+	}
+}

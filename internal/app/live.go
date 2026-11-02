@@ -63,6 +63,7 @@ func StartBackground(ctx context.Context, opts BackgroundOptions) func() {
 	rt.widgets.refresh()
 	if opts.Host != nil && opts.Home != "" {
 		go opts.Host.watchGrokBot(ctx, opts.Home)
+		go opts.Host.watchCursor(ctx, opts.Home)
 	}
 	return func() {
 		if unsubscribe != nil {
@@ -465,6 +466,7 @@ func publishLive(host *App, snap runway.Snapshot) {
 		return
 	}
 	snap = host.overlayGrokBotStatus(snap)
+	snap = host.overlayCursorStatus(snap)
 	mygo.RunOnMain(func() {
 		host.PublishSnapshot(snap)
 		ApplyTray(host.tray, TrayFromStatus(snap.StatusBar))

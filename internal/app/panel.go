@@ -94,7 +94,7 @@ func (a *App) panelMainPage(c *ui.Context, l l10n.Localizer, prefs store.Prefere
 func panelStatusLines(c *ui.Context, l l10n.Localizer, prefs store.Preferences, snap runway.Snapshot) {
 	message, failure := snap.Accounts.Message, snap.Codex.LastError
 	switch prefs.SelectedProvider {
-	case store.ProviderGrokBot:
+	case store.ProviderGrokBot, store.ProviderCursor:
 		return
 	case store.ProviderGrok:
 		message, failure = snap.Grok.Accounts.Message, snap.Grok.LastError
@@ -102,7 +102,7 @@ func panelStatusLines(c *ui.Context, l l10n.Localizer, prefs store.Preferences, 
 		message, failure = snap.Claude.Accounts.Message, snap.Claude.LastError
 	}
 	notice := ""
-	if prefs.SelectedProvider != store.ProviderGrok && prefs.SelectedProvider != store.ProviderClaude && prefs.SelectedProvider != store.ProviderGrokBot {
+	if prefs.SelectedProvider != store.ProviderGrok && prefs.SelectedProvider != store.ProviderClaude && prefs.SelectedProvider != store.ProviderGrokBot && prefs.SelectedProvider != store.ProviderCursor {
 		if n, ok := netx.NoteFallback(); ok && n.DirectOK && time.Since(n.At) < 10*time.Minute {
 			notice = l.ProxyDirectUsed(n.Endpoint)
 		}

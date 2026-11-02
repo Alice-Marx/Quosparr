@@ -15,6 +15,7 @@ var (
 	grokPreferredWindows    = []int{WeeklyMinutes, MonthlyMinutes}
 	claudePreferredWindows  = []int{FiveHourMinutes, WeeklyMinutes}
 	grokBotPreferredWindows = []int{WeeklyMinutes}
+	cursorPreferredWindows  = []int{WeeklyMinutes, MonthlyMinutes}
 )
 
 // PrimaryStandardMeter picks the first standard meter matching a preferred
@@ -84,7 +85,10 @@ type StatusInputs struct {
 	// GrokBotMeters is the assistant weekly quota. It is empty until the
 	// panel has a snapshot; Codex meters are never reused for it.
 	GrokBotMeters []Meter
-	Now           time.Time
+	// CursorMeters is Cursor product usage. It is never the assistant quota
+	// and never a CLI meter.
+	CursorMeters []Meter
+	Now          time.Time
 }
 
 // GrokStatusText is the status text of Grok: the countdown of the first
@@ -114,7 +118,7 @@ func statusTextFor(lc l10n.Localizer, in StatusInputs, p store.Provider) string 
 		return GrokStatusText(lc, in.Grok, in.Now)
 	case store.ProviderClaude:
 		return ClaudeStatusText(lc, in.Claude, in.Now)
-	case store.ProviderGrokBot:
+	case store.ProviderGrokBot, store.ProviderCursor:
 		return lc.Text(l10n.KeyStatusUnknown)
 	default:
 		return in.CodexText
@@ -156,6 +160,8 @@ func metersOf(in StatusInputs, p store.Provider) []Meter {
 		return in.Claude.Meters
 	case store.ProviderGrokBot:
 		return in.GrokBotMeters
+	case store.ProviderCursor:
+		return in.CursorMeters
 	default:
 		return in.CodexMeters
 	}
@@ -169,14 +175,19 @@ func preferredOf(p store.Provider) []int {
 		return claudePreferredWindows
 	case store.ProviderGrokBot:
 		return grokBotPreferredWindows
+	case store.ProviderCursor:
+		return cursorPreferredWindows
 	default:
 		return codexPreferredWindows
 	}
 }
 
 func statusProviderName(lc l10n.Localizer, p store.Provider) string {
-	if p == store.ProviderGrokBot {
+	switch p {
+	case store.ProviderGrokBot:
 		return "Grok Bot"
+	case store.ProviderCursor:
+		return "Cursor"
 	}
 	return lc.Text(providerStatusKey(p))
 }
@@ -262,7 +273,7 @@ func statusGroups(in StatusInputs) [][]store.Provider {
 	groups := in.Prefs.StatusBarGroups()
 	if groups == nil {
 		p := in.Provider
-		if p != store.ProviderGrokBot && !p.Valid() {
+		if p != store.ProviderGrokBot && p != store.ProviderCursor && !p.Valid() {
 			p = store.ProviderCodex
 		}
 		return [][]store.Provider{{p}}

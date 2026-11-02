@@ -98,7 +98,7 @@ func TestPanelStripFollowsTheShownProviders(t *testing.T) {
 		a.settings.SetSelectedProvider(p)
 	}})
 	tt.Frame()
-	if hasExact(tt, l.Text(l10n.KeyProviderGrok)) || !hasExact(tt, l.Text(l10n.KeyProviderClaude)) || !hasExact(tt, tx(l, xGrokBotTab)) {
+	if hasExact(tt, l.Text(l10n.KeyProviderGrok)) || !hasExact(tt, l.Text(l10n.KeyProviderClaude)) || !hasExact(tt, tx(l, xGrokBotTab)) || !hasExact(tt, tx(l, xCursorTab)) {
 		t.Fatalf("strip: %q", tt.Texts())
 	}
 	if err := tt.Click(l.Text(l10n.KeyProviderClaude)); err != nil {
@@ -112,7 +112,7 @@ func TestPanelStripFollowsTheShownProviders(t *testing.T) {
 	_, only := newPanel(t, func(p *store.Preferences) {
 		p.PanelProviders = []store.Provider{store.ProviderCodex}
 	}, panelFixture(), PanelActions{})
-	if !hasExact(only, l.Text(l10n.KeyProviderCodex)) || !hasExact(only, tx(l, xGrokBotTab)) || hasExact(only, l.Text(l10n.KeyProviderGrok)) || hasExact(only, l.Text(l10n.KeyProviderClaude)) {
-		t.Fatalf("one CLI provider should keep the assistant tab: %q", only.Texts())
+	if !hasExact(only, l.Text(l10n.KeyProviderCodex)) || !hasExact(only, tx(l, xGrokBotTab)) || !hasExact(only, tx(l, xCursorTab)) || hasExact(only, l.Text(l10n.KeyProviderGrok)) || hasExact(only, l.Text(l10n.KeyProviderClaude)) {
+		t.Fatalf("one CLI provider should keep the snapshot tabs: %q", only.Texts())
 	}
 }

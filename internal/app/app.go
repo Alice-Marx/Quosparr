@@ -91,6 +91,7 @@ type App struct {
 	snap      runway.Snapshot
 	panelActs PanelActions
 	grokBot   grokBotHold
+	cursor    cursorHold
 
 	backgroundReady bool
 	stopBackground  func()
