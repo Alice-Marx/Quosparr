@@ -10,4 +10,11 @@
 // The snapshot is non-secret usage stats. Tokens, API keys, and other unknown
 // fields are ignored on read and are not written back. Grok Bot assistant
 // usage is a different file and a different package.
+//
+// includedPools, when set, splits the included allowance into Cursor Models
+// and Other Models. Each pool object that is present must carry usedPercent
+// from 0 to 100; label and note are optional. When includedPools is absent,
+// callers keep included.usedPercent and the optional breakdown. grokBotWeeklyRef
+// only records that the weekly assistant quota lives in the Grok Bot snapshot.
+// This file does not store that weekly percent.
 package cursorusage

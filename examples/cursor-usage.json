@@ -6,13 +6,25 @@
   "included": {
     "usedPercent": 42.5,
     "resetAt": "2026-11-06T17:57:00+08:00",
-    "periodLabel": "this_week"
+    "periodLabel": "Included in Pro"
+  },
+  "includedPools": {
+    "cursorModels": {
+      "usedPercent": 42.5,
+      "label": "Cursor Models",
+      "note": "Includes Cursor Grok and Composer"
+    },
+    "otherModels": {
+      "usedPercent": 0,
+      "label": "Other Models"
+    }
   },
   "onDemand": {
     "status": "unlimited",
     "usedUsd": null,
     "limitUsd": null
   },
+  "grokBotWeeklyRef": true,
   "breakdown": [
     { "name": "Cloud Agents", "sharePercent": 60 },
     { "name": "Tab / Inline", "sharePercent": 25 },

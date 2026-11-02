@@ -84,11 +84,15 @@ func cursorReading(c *ui.Context, l l10n.Localizer, s cursorScreen, rs resetSwit
 	t := c.Theme()
 	ui.Column(c).Gap(10).Children(func() {
 		dimText(c, tx(l, xCursorLocal)+" · "+s.Path)
-		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
-			ui.Text(c, tx(l, xGrokBotUsed, used)).FontSize(fsCallout).FontWeight(600).Grow(1).Basis(0)
-			ui.Text(c, tx(l, xGrokBotLeft, left)).FontSize(fsCallout).FontWeight(600).FontFeatures("tnum").TextColor(healthInk(t, grokBotHealth(snap.Included.UsedPercent))).SingleLine()
-		})
-		usedFractionBar(c, snap.Included.UsedPercent/100, grokBotHealth(snap.Included.UsedPercent))
+		if snap.HasModelPools() {
+			cursorModelPools(c, l, snap.IncludedPools)
+		} else {
+			ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+				ui.Text(c, tx(l, xGrokBotUsed, used)).FontSize(fsCallout).FontWeight(600).Grow(1).Basis(0)
+				ui.Text(c, tx(l, xGrokBotLeft, left)).FontSize(fsCallout).FontWeight(600).FontFeatures("tnum").TextColor(healthInk(t, grokBotHealth(snap.Included.UsedPercent))).SingleLine()
+			})
+			usedFractionBar(c, snap.Included.UsedPercent/100, grokBotHealth(snap.Included.UsedPercent))
+		}
 		if snap.Included.HasReset {
 			ui.Row(c).Children(func() {
 				ui.Spacer(c).Grow(1)
@@ -96,6 +100,9 @@ func cursorReading(c *ui.Context, l l10n.Localizer, s cursorScreen, rs resetSwit
 			})
 		}
 		cursorOnDemandLines(c, l, snap.OnDemand)
+		if snap.GrokBotWeeklyRef {
+			dimText(c, tx(l, xCursorWeeklyRef))
+		}
 		dimText(c, tx(l, xGrokBotFetched, snap.FetchedAt.Local().Format("2006-01-02 15:04")))
 		if len(snap.Breakdown) > 0 {
 			cursorBreakdown(c, l, snap.Breakdown)
@@ -119,6 +126,45 @@ func cursorOnDemandLines(c *ui.Context, l l10n.Localizer, demand cursorusage.OnD
 	case demand.HasLimit:
 		dimText(c, tx(l, xCursorOnDemandCap, cursorusage.FormatUSD(demand.LimitUSD)))
 	}
+}
+
+// cursorModelPools is the Included-in-Pro strip: one progress row per pool,
+// separate from the optional product breakdown below.
+func cursorModelPools(c *ui.Context, l l10n.Localizer, pools cursorusage.IncludedPools) {
+	ui.Column(c).Gap(10).Children(func() {
+		if pools.CursorModels.Present {
+			cursorPoolRow(c, cursorPoolLabel(l, pools.CursorModels, xCursorModelsLabel), cursorModelsNote(l, pools.CursorModels), pools.CursorModels.UsedPercent)
+		}
+		if pools.OtherModels.Present {
+			cursorPoolRow(c, cursorPoolLabel(l, pools.OtherModels, xCursorOtherModelsLabel), pools.OtherModels.Note, pools.OtherModels.UsedPercent)
+		}
+	})
+}
+
+func cursorPoolRow(c *ui.Context, label, note string, used float64) {
+	t := c.Theme()
+	ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+		ui.Text(c, label).FontSize(fsCallout).FontWeight(600).Grow(1).Basis(0)
+		ui.Text(c, cursorusage.FormatPercent(used)+"%").FontSize(fsCallout).FontWeight(600).FontFeatures("tnum").TextColor(healthInk(t, grokBotHealth(used))).SingleLine()
+	})
+	usedFractionBar(c, used/100, grokBotHealth(used))
+	if note != "" {
+		dimText(c, note)
+	}
+}
+
+func cursorPoolLabel(l l10n.Localizer, pool cursorusage.Pool, fallback textKey) string {
+	if pool.Label != "" {
+		return pool.Label
+	}
+	return tx(l, fallback)
+}
+
+func cursorModelsNote(l l10n.Localizer, pool cursorusage.Pool) string {
+	if pool.Note != "" {
+		return pool.Note
+	}
+	return tx(l, xCursorModelsNote)
 }
 
 func cursorBreakdown(c *ui.Context, l l10n.Localizer, items []cursorusage.Share) {
@@ -151,6 +197,8 @@ func cursorPeriod(l l10n.Localizer, label string) string {
 		return tx(l, xGrokBotPeriodWeek)
 	case "this_month":
 		return tx(l, xCursorPeriodMonth)
+	case "Included in Pro":
+		return tx(l, xCursorIncludedInPro)
 	default:
 		return label
 	}
